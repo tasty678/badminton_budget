@@ -321,6 +321,52 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 .pill-tab-ongoing.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab-archived.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab{padding:7px 18px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border2);background:none;color:var(--text2);font-family:'Noto Sans TC',sans-serif;transition:all .15s}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkGvoBUH3nowpRR6oYp-NU0Ug3RQEYLoY",
+      authDomain: "badminton-budget.firebaseapp.com",
+      projectId: "badminton-budget",
+      storageBucket: "badminton-budget.firebasestorage.app",
+      messagingSenderId: "1096871725452",
+      appId: "1:1096871725452:web:43bdaab9d6d5a6fdf76ea9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // Expose to global scope for onclick handlers
+    window._fbAuth = auth;
+    window._fbProvider = provider;
+    window._fbSignIn = () => signInWithPopup(auth, provider);
+    window._fbSignOut = () => signOut(auth);
+
+    // Auth state observer
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Signed in
+        D.currentUser = user.email;
+        if (!D.users[user.email]) {
+          D.users[user.email] = {
+            name: user.displayName || user.email.split('@')[0],
+            photoURL: user.photoURL || null
+          };
+          save();
+        }
+        document.getElementById('login-screen').style.display = 'none';
+        showMain();
+      } else {
+        // Signed out
+        D.currentUser = null;
+        document.getElementById('main-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+      }
+    });
+  </script>
 </head>
 <body>
 
@@ -328,14 +374,12 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 <div id="login-screen">
   <div class="login-logo">🏸</div>
   <div class="login-title">羽球團管理</div>
-  <div class="login-sub" style="margin-bottom:8px">登入你的帳號</div>
-  <div style="display:flex;flex-direction:column;gap:8px">
-    <input class="l-inp" id="l-email" type="email" placeholder="Email" autocomplete="username"/>
-    <input class="l-inp" id="l-pass" type="password" placeholder="密碼" autocomplete="current-password"/>
-    <div class="l-err" id="l-err">Email 或密碼錯誤</div>
-    <button class="l-btn" onclick="doLogin()">登入</button>
-  </div>
-  <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px">第一次使用？輸入任意 email + 密碼即可建立帳號</p>
+  <div class="login-sub" style="margin-bottom:24px">請登入以繼續使用</div>
+  <button class="l-btn" onclick="googleLogin()" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#3c4043;border:1.5px solid #dadce0;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+    使用 Google 帳號登入
+  </button>
+  <div class="l-err" id="l-err" style="text-align:center"></div>
 </div>
 
 <!-- MAIN APP -->
@@ -564,16 +608,17 @@ function fmtM(n){const a=Math.abs(Math.round(n));return(n<0?'-':'')+'$'+a.toLoca
 function fmtDS(s){if(!s)return'';const d=new Date(s);return`${d.getMonth()+1}/${d.getDate()}`}
 
 // LOGIN
-function doLogin(){
-  const em=document.getElementById('l-email').value.trim();
-  const pw=document.getElementById('l-pass').value;
-  const err=document.getElementById('l-err');
-  if(!em||!pw){err.style.display='block';err.textContent='請輸入 Email 和密碼';return;}
-  if(!D.users[em]){D.users[em]={password:pw,name:em.split('@')[0]};save();}
-  if(D.users[em].password!==pw){err.style.display='block';err.textContent='Email 或密碼錯誤';return;}
-  err.style.display='none';D.currentUser=em;save();showMain();
+// doLogin replaced by Firebase Google Auth
+function doLogout(){
+  closePanel('acct');
+  if(window._fbSignOut){
+    window._fbSignOut().catch(()=>{});
+  } else {
+    D.currentUser=null;save();
+    document.getElementById('main-screen').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+  }
 }
-function doLogout(){D.currentUser=null;save();closePanel('acct');document.getElementById('main-screen').style.display='none';document.getElementById('login-screen').style.display='flex';}
 
 // PROFILE
 function openAcctPanel(){
@@ -581,7 +626,10 @@ function openAcctPanel(){
   document.getElementById('pa-name').value=u?u.name:'';
   document.getElementById('pa-email').textContent=D.currentUser||'';
   const n=(u&&u.name)?u.name:'?';
-  document.getElementById('pa-avatar').textContent=n.charAt(0).toUpperCase();
+  const photoURL=u&&u.photoURL;
+  const avatarEl=document.getElementById('pa-avatar');
+  if(photoURL){avatarEl.innerHTML=`<img src="${photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover"/>`;}
+  else{avatarEl.textContent=n.charAt(0).toUpperCase();}
   renderNotifs();
   document.getElementById('acct-panel').classList.add('open');
   document.getElementById('acct-overlay').classList.add('open');
@@ -1722,7 +1770,21 @@ function openCalMonthPicker(){
 }
 
 load();
-if(D.currentUser&&D.users[D.currentUser]){showMain();}
+// Don't auto-login from localStorage anymore - Firebase onAuthStateChanged handles it
+
+function googleLogin(){
+  const err = document.getElementById('l-err');
+  err.style.display = 'none';
+  if(!window._fbSignIn){
+    err.style.display = 'block';
+    err.textContent = 'Firebase 載入中，請稍後再試';
+    return;
+  }
+  window._fbSignIn().catch(e => {
+    err.style.display = 'block';
+    err.textContent = '登入失敗：' + (e.message || e.code || '請再試一次');
+  });
+}
 </script>
 </body>
 </html>
