@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="羽球管理"/>
+<title>羽球團管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#FAFAFA;--surface:#fff;--surface2:#F5F5F5;--surface3:#EDEDED;
+  --border:#DBDBDB;--border2:#C7C7C7;
+  --text:#2C2C2A;--text2:#5F6B65;--text3:#9EA8A3;
+  --green:#6A9678;--gl:#EEF4F0;--gm:#8AAB93;
+  --red:#C0614E;--rl:#F3D9E0;
+  --amb:#9E7B3A;--al:#FBF0D9;
+  --blue:#5190A2;--bl:#E9EFEF;
+  --r:10px;--rl2:14px;--r3:18px;
+  --sh:0 1px 4px rgba(0,0,0,.07),0 0 1px rgba(0,0,0,.04);
+}
+html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif;color:var(--text);font-size:15px;-webkit-font-smoothing:antialiased}
+#app{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg)}
+
+/* LOGIN */
+#login-screen{display:flex;flex-direction:column;justify-content:center;padding:2.5rem 1.5rem;gap:1rem;min-height:100dvh;background:var(--surface)}
+.login-logo{width:56px;height:56px;border-radius:16px;background:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:28px}
+.login-title{font-size:24px;font-weight:700;text-align:center;color:var(--text)}
+.login-sub{font-size:14px;color:var(--text2);text-align:center}
+.l-inp{width:100%;padding:13px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:15px;font-family:'Noto Sans TC',sans-serif;color:var(--text);background:var(--surface);outline:none}
+.l-inp:focus{border-color:var(--gm)}
+.l-btn{width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Noto Sans TC',sans-serif;cursor:pointer}
+.l-err{color:var(--red);font-size:13px;display:none}
+
+/* MAIN */
+#main-screen{display:none;flex-direction:column;flex:1;min-height:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:17px;font-weight:700;color:var(--text);flex:1}
+.topbar-sub{font-size:12px;color:var(--text2);margin-top:1px}
+.back-btn{width:34px;height:34px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:18px;flex-shrink:0}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:20px;position:relative;flex-shrink:0}
+.notif-badge{position:absolute;top:0;right:0;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface)}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:120px}
+
+/* FOOTER */
+.footer{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:390px;background:#4A6B58;border-radius:28px;display:flex;z-index:10;box-shadow:0 8px 32px rgba(74,107,88,.35);padding:4px}
+.ftab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.55);background:none;border:none;cursor:pointer;border-radius:24px;transition:all .2s}
+.ftab i{font-size:22px}.ftab.act{background:rgba(255,255,255,.2);color:#fff}
+
+
+/* HOME */
+.home-header{background:linear-gradient(150deg,#7A9E89 0%,#5C7D6A 100%);padding:52px 20px 56px;position:relative;border-radius:0 0 32px 32px;overflow:hidden;transition:all .3s ease}
+.home-header::after{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
+.home-header::before{content:'';position:absolute;bottom:-30px;left:20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05)}
+.home-header.scrolled{padding:20px 20px 28px}
+.home-greeting{font-size:15px;color:rgba(255,255,255,.75);font-weight:500;margin-bottom:4px}
+.home-name{font-size:32px;font-weight:700;color:#fff;line-height:1.15}
+.home-date{font-size:13px;color:rgba(255,255,255,.6);margin-top:8px}
+.home-acct-btn{position:absolute;top:20px;right:16px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;z-index:5}
+.home-sessions-title{font-size:22px;font-weight:700;color:var(--text);padding:20px 20px 10px}
+.topbar-acct-btn{width:36px;height:36px;border-radius:50%;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:22px;position:relative;flex-shrink:0;margin-left:2px}
+.topbar-acct-btn:hover{background:var(--surface2)}
+.tb-notif-dot{position:absolute;top:0;right:0;width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface)}
+
+/* TEAM CARDS */
+.team-section{padding:16px 16px 0}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl2);padding:14px;box-shadow:var(--sh);cursor:pointer;transition:transform .1s}
+.team-card:active{transform:scale(.98)}
+.team-card+.team-card{margin-top:10px}
+.team-card.upcoming{border-color:var(--gm);border-left:3px solid var(--gm)}
+.tc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.tc-name{font-size:15px;font-weight:700;color:var(--text);flex:1}
+.tc-type{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;white-space:nowrap}
+.ty-year{background:#EEF4F0;color:#6A9678}
+.ty-season{background:#FBF0D9;color:#9E7B3A}
+.ty-casual{background:#E9EFEF;color:#5190A2}
+.tc-meta{font-size:12px;color:var(--text2);margin-bottom:8px}
+.tc-next{font-size:12px;font-weight:500;color:var(--green);margin-bottom:8px}
+.tc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid var(--border)}
+.tc-stat-val{font-size:15px;font-weight:700}
+.tc-stat-lbl{font-size:10px;color:var(--text3);margin-top:1px}
+.add-team-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:1.5px dashed var(--border2);border-radius:var(--rl2);background:none;color:var(--text2);font-size:14px;font-weight:500;font-family:'Noto Sans TC',sans-serif;cursor:pointer;margin-top:10px}
+.add-team-btn i{font-size:18px;color:var(--text3)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:57px;z-index:9}
+.tab{flex:1;padding:10px 4px;text-align:center;font-size:12px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent}
+.tab.act{color:var(--green);border-bottom-color:var(--green)}
+
+/* SEASON ACCORDION */
+.season-block{margin-bottom:8px}
+.season-hd{display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;cursor:pointer;gap:8px;box-shadow:var(--sh)}
+.s-arrow{font-size:14px;color:var(--text3);transition:transform .2s;flex-shrink:0}
+.s-arrow.open{transform:rotate(90deg)}
+.s-hd-info{flex:1;min-width:0}
+.s-hd-name{font-size:14px;font-weight:700;color:var(--text)}
+.s-hd-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.season-body{display:none;padding-top:8px}
+.season-body.open{display:block}
+
+/* SESSION CARD */
+.sess-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;box-shadow:var(--sh);cursor:pointer;display:flex;align-items:flex-start;gap:10px;transition:transform .1s;margin-bottom:6px}
+.sess-card:active{transform:scale(.98)}
+.sc-date{text-align:center;min-width:36px;flex-shrink:0}
+.sc-day{font-size:20px;font-weight:700;color:var(--text);line-height:1}
+.sc-mon{font-size:10px;color:var(--text2);margin-top:2px}
+.sc-wd{font-size:10px;color:var(--text3)}
+.sc-right{flex:1;min-width:0}
+.sc-title{font-size:13px;font-weight:700;color:var(--text)}
+.sc-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.sc-pills{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.pill{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.p-grn{background:var(--gl);color:var(--green)}
+.p-blu{background:var(--bl);color:var(--blue)}
+.p-amb{background:var(--al);color:var(--amb)}
+.p-red{background:var(--rl);color:var(--red)}
+.p-gray{background:var(--surface2);color:var(--text2)}
+
+/* ATTENDANCE */
+.att-sec-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px}
+.att-sec-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.att-list{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.att-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.att-row:last-child{border-bottom:none}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.av-g{background:var(--gl);color:var(--green)}
+.av-b{background:var(--bl);color:var(--blue)}
+.av-a{background:var(--al);color:var(--amb)}
+.att-info{flex:1;min-width:0}
+.att-name{font-size:14px;font-weight:500;color:var(--text)}
+.att-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.att-amt{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap}
+.chk{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border2);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.chk.on{background:var(--green);border-color:var(--green);color:#fff}
+.chk i{font-size:14px}
+
+/* SESS HEADER */
+.sess-hdr{background:var(--surface2);padding:14px 16px;border-bottom:1px solid var(--border)}
+.sess-hdr-date{font-size:18px;font-weight:700;color:var(--text)}
+.sess-hdr-meta{font-size:12px;color:var(--text2);margin-top:3px}
+.sess-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.ss-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px;text-align:center}
+.ss-val{font-size:16px;font-weight:700}
+.ss-lbl{font-size:10px;color:var(--text3);margin-top:1px}
+
+/* MEMBER LIST */
+.ml{background:var(--surface)}
+.ml-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border2)}
+.ml-row:last-child{border-bottom:none}
+.ml-info{flex:1;min-width:0}
+.ml-name{font-size:14px;font-weight:500;color:var(--text)}
+.ml-sub{font-size:11px;color:var(--text3);margin-top:1px}
+
+/* EXPENSES */
+.exp-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.exp-row:last-child{border-bottom:none}
+.exp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.exp-info{flex:1;min-width:0}
+.exp-name{font-size:13px;color:var(--text)}
+.exp-cat{font-size:11px;color:var(--text3);margin-top:1px}
+.exp-amt{font-size:13px;font-weight:700;color:var(--red);white-space:nowrap}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;box-shadow:var(--sh)}
+.stat-lbl{font-size:11px;color:var(--text2);margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:700;color:var(--text)}
+.red{color:var(--red)}.grn{color:var(--green)}.amb{color:var(--amb)}
+
+/* BAR CHARTS */
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-label{font-size:12px;color:var(--text2);min-width:60px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.bar-fill{height:100%;border-radius:5px;transition:width .4s ease}
+.bar-val{font-size:11px;color:var(--text);min-width:44px;text-align:right;flex-shrink:0}
+
+/* CONTACTS */
+.contact-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.contact-row:last-child{border-bottom:none}
+
+/* OVERLAY / SHEET */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:100;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:430px;max-height:92dvh;overflow-y:auto;padding:0 0 env(safe-area-inset-bottom)}
+.sh-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 4px}
+.sh-title{font-size:17px;font-weight:700;padding:12px 18px 16px;border-bottom:1px solid var(--border)}
+.sh-body{padding:16px 18px}
+.sh-footer{padding:12px 18px;border-top:1px solid var(--border)}
+
+/* PANEL (side slide) */
+.panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200}
+.panel-overlay.open{display:block}
+.panel{position:fixed;top:0;right:-100%;width:88%;max-width:360px;height:100dvh;background:var(--surface);z-index:201;transition:right .25s ease;overflow-y:auto;display:flex;flex-direction:column}
+.panel.open{right:0}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)}
+.panel-hd h3{font-size:17px;font-weight:700;color:var(--text)}
+.panel-body{padding:20px 18px;flex:1;display:flex;flex-direction:column;gap:14px}
+.pa-avatar{width:64px;height:64px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;font-weight:700;margin:0 auto 4px}
+
+/* NOTIF PANEL */
+.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.notif-item:last-child{border-bottom:none}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:5px}
+.notif-text{flex:1;font-size:13px;color:var(--text);line-height:1.5}
+.notif-date{font-size:11px;color:var(--text3);margin-top:3px}
+.notif-empty{font-size:14px;color:var(--text3);text-align:center;padding:32px 0}
+
+/* FORM */
+.fg{margin-bottom:16px}
+.fl{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.04em}
+.fi{width:100%;padding:11px 13px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;font-family:'Noto Sans TC',sans-serif;color:var(--text);background:var(--surface);outline:none}
+.fi:focus{border-color:var(--gm)}
+.fsel{width:100%;padding:11px 13px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;font-family:'Noto Sans TC',sans-serif;color:var(--text);background:var(--surface);outline:none;appearance:none}
+.day-btns{display:flex;gap:6px;flex-wrap:wrap}
+.day-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:none;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.day-btn.sel{background:var(--green);border-color:var(--green);color:#fff}
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-opt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer}
+.radio-opt.sel{border-color:var(--gm);background:var(--gl)}
+.rdot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s;position:relative}
+.rdot.sel{border-color:var(--green);background:var(--green)}
+.rdot.sel::after{content:'';width:6px;height:6px;background:#fff;border-radius:50%;position:absolute}
+.rl{font-size:14px;color:var(--text);font-weight:500}
+.rs{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* BUTTONS */
+.btn-p{width:100%;padding:13px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:700;font-family:'Noto Sans TC',sans-serif;cursor:pointer}
+.btn-p:active{opacity:.85}
+.btn-s{width:100%;padding:13px;background:none;color:var(--text2);border:1px solid var(--border2);border-radius:var(--r);font-size:15px;font-weight:500;font-family:'Noto Sans TC',sans-serif;cursor:pointer;margin-top:8px}
+.btn-sm{padding:6px 12px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:500;font-family:'Noto Sans TC',sans-serif;cursor:pointer;white-space:nowrap}
+.btn-smo{padding:6px 12px;background:none;color:var(--green);border:1px solid var(--gm);border-radius:var(--r);font-size:12px;font-weight:500;font-family:'Noto Sans TC',sans-serif;cursor:pointer;white-space:nowrap}
+.btn-ds{padding:6px 10px;background:none;color:var(--red);border:1px solid var(--red);border-radius:var(--r);font-size:11px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;white-space:nowrap}
+.ia{background:none;border:none;cursor:pointer;color:var(--text3);padding:8px;font-size:18px;line-height:1;border-radius:6px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+.ia:hover{color:var(--text)}
+.lk{font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;font-weight:500}
+.fab{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom) + 12px);right:50%;transform:translateX(calc(50% - 199px + 16px));width:52px;height:52px;border-radius:50%;background:#8AAB93;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(138,171,147,.5);z-index:20}
+.fab i{font-size:24px;color:#fff}
+.icon-row{display:flex;gap:4px;flex-shrink:0}
+.section{padding:14px 16px 0}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.st{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty i{font-size:48px;color:var(--border2);display:block;margin-bottom:12px}
+.empty p{font-size:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl2);padding:14px;box-shadow:var(--sh)}
+
+/* CONTACT SELECT */
+.contact-sel-list{max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px}
+.csl-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+.csl-row:last-child{border-bottom:none}
+.csl-row:hover{background:var(--gl)}
+.csl-name{font-size:14px;color:var(--text);font-weight:500;flex:1}
+.csl-sub{font-size:11px;color:var(--text3)}
+
+/* ANALYTICS */
+.analytics-total{background:linear-gradient(160deg,#7A9E89,#5C7D6A);border-radius:var(--rl2);margin:14px 16px 0;padding:16px}
+.at-title{font-size:13px;color:rgba(255,255,255,.7);font-weight:500;margin-bottom:12px}
+.at-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.at-card{background:rgba(255,255,255,.12);border-radius:var(--r);padding:10px 12px}
+.at-lbl{font-size:11px;color:rgba(255,255,255,.65);margin-bottom:3px}
+.at-val{font-size:20px;font-weight:700;color:#fff}
+.at-val.pos{color:#6ee7b7}
+.at-val.neg{color:#fca5a5}
+
+/* SECTION ACCORDION */
+.acc-hd{display:flex;align-items:center;gap:8px;padding:12px 16px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-left:3px solid transparent;border-radius:12px;margin:0 16px 6px}
+.acc-hd.open{border-bottom:none;border-radius:12px 12px 0 0}
+.acc-hd.year-hd{border-left-color:#8B9E8A;background:#DDE5DB}.acc-hd.year-hd .acc-title{color:#3A4E38}.acc-hd.year-hd .ia{color:#3A4E3888}
+.acc-hd.s0{border-left-color:#8B9E8A;background:#DDE5DB}.acc-hd.s0 .s-hd-name{color:#3A4E38}.acc-hd.s0 .s-hd-meta{color:#3A4E3899}.acc-hd.s0 .ia{color:#3A4E3888}
+.acc-hd.s1{border-left-color:#B89D8C;background:#EDE3DC}.acc-hd.s1 .s-hd-name{color:#5C3E30}.acc-hd.s1 .s-hd-meta{color:#5C3E3099}.acc-hd.s1 .ia{color:#5C3E3088}
+.acc-hd.s2{border-left-color:#C4A09A;background:#EFE0DC}.acc-hd.s2 .s-hd-name{color:#5A3030}.acc-hd.s2 .s-hd-meta{color:#5A303099}.acc-hd.s2 .ia{color:#5A303088}
+.acc-hd.s3{border-left-color:#A8A090;background:#E3DFDA}.acc-hd.s3 .s-hd-name{color:#48443C}.acc-hd.s3 .s-hd-meta{color:#48443C99}.acc-hd.s3 .ia{color:#48443C88}
+.acc-hd.s4{border-left-color:#C8A882;background:#F0E4D4}.acc-hd.s4 .s-hd-name{color:#5A4020}.acc-hd.s4 .s-hd-meta{color:#5A402099}.acc-hd.s4 .ia{color:#5A402088}
+.acc-hd.s5{border-left-color:#B0907A;background:#E8DCD4}.acc-hd.s5 .s-hd-name{color:#4E3020}.acc-hd.s5 .s-hd-meta{color:#4E302099}.acc-hd.s5 .ia{color:#4E302088}
+.acc-arrow{font-size:14px;color:var(--text3);transition:transform .2s}
+.acc-arrow.open{transform:rotate(90deg)}
+.acc-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
+.acc-body{display:none;border-left:3px solid transparent;margin:0 16px;border-radius:0 0 12px 12px;overflow:hidden}
+.acc-body.open{display:block}
+.acc-body.year-bd{border-left-color:#8AAB93}
+.acc-body.s0b{border-left-color:#8B9E8A}
+.acc-body.s1b{border-left-color:#B89D8C}
+.acc-body.s2b{border-left-color:#C4A09A}
+.acc-body.s3b{border-left-color:#A8A090}
+.acc-body.s4b{border-left-color:#C8A882}
+.acc-body.s5b{border-left-color:#B0907A}
+
+/* CALENDAR */
+.cal-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.cal-nav{display:flex;align-items:center;gap:4px;flex:1;justify-content:center}
+.cal-nav-btn{background:none;border:none;cursor:pointer;color:var(--green);font-size:20px;padding:4px 8px;border-radius:var(--r);line-height:1}
+.cal-year-btn,.cal-month-btn{background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;color:var(--text);padding:4px 6px;border-radius:var(--r)}
+.cal-year-btn:hover,.cal-month-btn:hover{background:var(--surface2)}
+.cal-sep{font-size:16px;font-weight:700;color:var(--text2)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface);border-bottom:1px solid var(--border)}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:8px 0;border-bottom:1px solid var(--border)}
+.cal-dow.sun{color:var(--red)}
+.cal-cell{min-height:88px;padding:4px 3px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);cursor:pointer;position:relative;overflow:hidden;background:var(--surface)}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell:hover{background:var(--surface2)}
+.cal-cell.other-month{background:var(--surface2);opacity:.6}
+.cal-cell.today .cal-num{background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 2px}
+.cal-num{font-size:12px;color:var(--text);text-align:center;margin-bottom:2px;font-weight:500}
+.cal-num.sun{color:var(--red)}
+.cal-events{display:flex;flex-direction:column;gap:1px;overflow:hidden}
+.cal-ev{font-size:9px;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:2px;line-height:1.5}
+.cal-ev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cal-picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.cal-picker-overlay.open{display:flex}
+.cal-picker-box{background:var(--surface);border-radius:var(--rl2);padding:16px;width:290px;max-height:80dvh;overflow-y:auto}
+.cal-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.cal-picker-cell{padding:10px 4px;text-align:center;font-size:13px;border-radius:var(--r);cursor:pointer;color:var(--text);border:0.5px solid var(--border)}
+.cal-picker-cell:hover{background:var(--surface2)}
+.cal-picker-cell.active{background:var(--green);color:#fff;border-color:var(--green)}
+.cal-year-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-year-nav span{font-size:15px;font-weight:700;color:var(--text)}
+.cal-year-nav button{background:none;border:none;cursor:pointer;color:var(--green);font-size:18px;padding:4px 8px;border-radius:var(--r)}
+
+.pill-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.pill-tab-ongoing.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab-archived.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab{padding:7px 18px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border2);background:none;color:var(--text2);font-family:'Noto Sans TC',sans-serif;transition:all .15s}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">🏸</div>
+  <div class="login-title">羽球團管理</div>
+  <div class="login-sub" style="margin-bottom:8px">登入你的帳號</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <input class="l-inp" id="l-email" type="email" placeholder="Email" autocomplete="username"/>
+    <input class="l-inp" id="l-pass" type="password" placeholder="密碼" autocomplete="current-password"/>
+    <div class="l-err" id="l-err">Email 或密碼錯誤</div>
+    <button class="l-btn" onclick="doLogin()">登入</button>
+  </div>
+  <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px">第一次使用？輸入任意 email + 密碼即可建立帳號</p>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-screen">
+  <div class="scroll" id="main-scroll">
+    <div id="page-home"></div>
+    <div id="page-analytics" style="display:none"></div>
+    <div id="page-calendar" style="display:none"></div>
+    <div id="page-contacts" style="display:none"></div>
+  </div>
+  <div class="footer">
+    <button class="ftab act" id="ftab-home" onclick="showPage('home')"><i class="ti ti-home"></i>首頁</button>
+    <button class="ftab" id="ftab-analytics" onclick="showPage('analytics')"><i class="ti ti-chart-bar"></i>統計</button>
+    <button class="ftab" id="ftab-calendar" onclick="showPage('calendar')"><i class="ti ti-calendar"></i>月曆</button>
+    <button class="ftab" id="ftab-contacts" onclick="showPage('contacts')"><i class="ti ti-users"></i>名單</button>
+  </div>
+</div>
+
+<!-- ACCOUNT PANEL -->
+<div class="panel-overlay" id="acct-overlay" onclick="closePanel('acct')"></div>
+<div class="panel" id="acct-panel">
+  <div class="panel-hd"><h3>帳號</h3><button class="ia" style="font-size:20px" onclick="closePanel('acct')"><i class="ti ti-x"></i></button></div>
+  <div class="panel-body">
+    <div><div class="pa-avatar" id="pa-avatar">?</div></div>
+    <div><div class="fl">顯示名稱</div><input class="fi" id="pa-name" placeholder="你的名字"/></div>
+    <div style="font-size:13px;color:var(--text3)" id="pa-email"></div>
+    <button class="btn-p" onclick="saveProfile()">儲存變更</button>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">通知</div>
+      <div id="notif-list"></div>
+    </div>
+    <button class="btn-s" style="margin-top:auto;color:var(--red);border-color:var(--red)" onclick="doLogout()">登出</button>
+  </div>
+</div>
+
+<!-- CALENDAR YEAR PICKER -->
+<div class="cal-picker-overlay" id="cal-year-overlay" onclick="this.classList.remove('open')">
+  <div class="cal-picker-box" onclick="event.stopPropagation()">
+    <div class="cal-year-nav">
+      <button onclick="shiftCalYearRange(-12)"><i class="ti ti-arrow-left"></i></button>
+      <span id="cal-year-range"></span>
+      <button onclick="shiftCalYearRange(12)"><i class="ti ti-arrow-right"></i></button>
+    </div>
+    <div class="cal-picker-grid" id="cal-year-grid"></div>
+    <button class="btn-s" style="margin-top:0" onclick="document.getElementById('cal-year-overlay').classList.remove('open')">取消</button>
+  </div>
+</div>
+<!-- CALENDAR MONTH PICKER -->
+<div class="cal-picker-overlay" id="cal-month-overlay" onclick="this.classList.remove('open')">
+  <div class="cal-picker-box" onclick="event.stopPropagation()">
+    <h4 style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text)">選擇月份</h4>
+    <div class="cal-picker-grid" id="cal-month-grid"></div>
+    <button class="btn-s" style="margin-top:0" onclick="document.getElementById('cal-month-overlay').classList.remove('open')">取消</button>
+  </div>
+</div>
+<!-- TEAM SHEET -->
+<div class="overlay" id="ov-team">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="sh-team-title">新增球團</div>
+    <div class="sh-body">
+      <div class="fg"><label class="fl">球團名稱</label><input class="fi" id="ft-name" placeholder="例：週一晚羽球團"/></div>
+      <div class="fg"><label class="fl">球團類型</label><select class="fsel" id="ft-type"><option value="year">年打</option><option value="season">季打</option><option value="casual">臨打</option></select></div>
+      <div class="fg"><label class="fl">固定打球日</label><div class="day-btns" id="ft-days"><button class="day-btn" data-d="0" onclick="this.classList.toggle('sel')">日</button><button class="day-btn" data-d="1" onclick="this.classList.toggle('sel')">一</button><button class="day-btn" data-d="2" onclick="this.classList.toggle('sel')">二</button><button class="day-btn" data-d="3" onclick="this.classList.toggle('sel')">三</button><button class="day-btn" data-d="4" onclick="this.classList.toggle('sel')">四</button><button class="day-btn" data-d="5" onclick="this.classList.toggle('sel')">五</button><button class="day-btn" data-d="6" onclick="this.classList.toggle('sel')">六</button></div></div>
+      <div class="fg"><label class="fl">時間</label><div style="display:flex;gap:8px;align-items:center"><input class="fi" id="ft-start" type="time" value="19:00" style="flex:1"/><span style="color:var(--text2)">—</span><input class="fi" id="ft-end" type="time" value="21:00" style="flex:1"/></div></div>
+      <div class="fg"><label class="fl">地點</label><input class="fi" id="ft-loc" placeholder="例：XX體育館"/></div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" onclick="saveTeam()">儲存</button><button class="btn-s" onclick="closeOv('ov-team')">取消</button></div>
+  </div>
+</div>
+
+<!-- SEASON SHEET -->
+<div class="overlay" id="ov-season">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="sh-season-title">新增季別</div>
+    <div class="sh-body">
+      <div class="fg"><label class="fl">季別名稱</label><input class="fi" id="fse-name" placeholder="例：Q1 2026"/></div>
+      <div class="fg"><label class="fl">開始日期</label><input class="fi" id="fse-start" type="date" oninput="previewSess()"/></div>
+      <div class="fg" id="fse-end-row"><label class="fl">結束日期</label><input class="fi" id="fse-end" type="date" oninput="previewSess()"/></div>
+      <div class="fg"><label class="fl">場地數</label><input class="fi" id="fse-courts" type="number" min="1" max="10" value="2" oninput="previewSess()"/></div>
+      <div class="fg"><label class="fl">每場地人數上限</label><input class="fi" id="fse-pax" type="number" min="1" max="30" value="7" oninput="previewSess()"/><div style="font-size:11px;color:var(--text3);margin-top:4px" id="fse-hint">總上限：14人（7 × 2）</div></div>
+      <div id="fse-preview" style="background:var(--surface2);border-radius:var(--r);padding:10px;font-size:13px;color:var(--text2);display:none"></div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" id="fse-save-btn" onclick="saveSeason()">產生場次</button><button class="btn-s" onclick="closeOv('ov-season')">取消</button></div>
+  </div>
+</div>
+
+<!-- ADJUST COURTS SHEET -->
+<div class="overlay" id="ov-add-sess">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">調整場地 / 人數</div>
+    <div class="sh-body">
+      <div id="fas-curr-info" style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+      <div class="fg">
+        <label class="fl">場地數</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="stepCourts(-1)" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)">−</button>
+          <input class="fi" id="fas-courts" type="number" min="1" max="10" value="2" oninput="updateFasHint()" style="text-align:center;width:70px;font-size:18px;font-weight:700"/>
+          <button onclick="stepCourts(1)" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)">+</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">每場地人數上限</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="stepPax(-1)" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)">−</button>
+          <input class="fi" id="fas-pax" type="number" min="1" max="30" value="7" oninput="updateFasHint()" style="text-align:center;width:70px;font-size:18px;font-weight:700"/>
+          <button onclick="stepPax(1)" style="width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)">+</button>
+        </div>
+      </div>
+      <div style="background:var(--gl);border-radius:var(--r);padding:12px 14px;font-size:14px;color:var(--green);font-weight:500" id="fas-hint">總上限：14人（7人 × 2場地）</div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" onclick="saveAddSess()">套用</button><button class="btn-s" onclick="closeOv('ov-add-sess')">取消</button></div>
+  </div>
+</div>
+
+<!-- MEMBER SHEET -->
+<div class="overlay" id="ov-member">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="sh-member-title">新增成員</div>
+    <div class="sh-body">
+      <div class="fg" id="fm-contact-sel-group">
+        <label class="fl">從常用名單選擇</label>
+        <input class="fi" id="fm-contact-search" placeholder="🔍 搜尋名字..." oninput="filterMemberContacts()" style="margin-bottom:8px;font-size:14px"/>
+        <div class="contact-sel-list" id="fm-contact-list"></div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">— 或手動輸入 —</div>
+      </div>
+      <div class="fg"><label class="fl">姓名</label><input class="fi" id="fm-name" placeholder="姓名"/></div>
+      <div class="fg"><label class="fl">身份</label><select class="fsel" id="fm-role" onchange="onRoleChange()"><option value="year">年繳</option><option value="season">季繳</option></select></div>
+      <div class="fg"><label class="fl">費用（每場）</label><input class="fi" id="fm-fee" type="number" placeholder="例：230"/></div>
+      <div class="fg">
+        <label class="fl">繳費區間</label>
+        <div class="radio-group">
+          <div class="radio-opt sel" id="rm-full" onclick="setRange('full')"><div class="rdot sel" id="rd-full"></div><div><div class="rl" id="rm-full-lbl">完整年繳</div><div class="rs" id="rm-full-sub">所有場次都算入</div></div></div>
+          <div class="radio-opt" id="rm-custom" onclick="setRange('custom')"><div class="rdot" id="rd-custom"></div><div><div class="rl">設定特定時段</div><div class="rs">自訂日期（可跨季）</div></div></div>
+        </div>
+      </div>
+      <div class="fg" id="fm-range" style="display:none">
+        <label class="fl">有效時段</label>
+        <div style="display:flex;gap:8px;align-items:center"><input class="fi" id="fm-from" type="date" style="flex:1"/><span style="color:var(--text2);flex-shrink:0">到</span><input class="fi" id="fm-to" type="date" style="flex:1"/></div>
+      </div>
+      <div class="fg"><label class="fl">備注（可選）</label><input class="fi" id="fm-note" placeholder="例：晚加入"/></div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" onclick="saveMember()">儲存</button><button class="btn-s" onclick="closeOv('ov-member')">取消</button></div>
+  </div>
+</div>
+
+<!-- EXPENSE SHEET -->
+<div class="overlay" id="ov-expense">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="sh-exp-title">新增費用</div>
+    <div class="sh-body">
+      <div class="fg"><label class="fl">費用類別</label><select class="fsel" id="fe-cat"><option value="場地費">場地費</option><option value="羽球">羽球費</option><option value="其他">其他</option></select></div>
+      <div class="fg"><label class="fl">說明</label><input class="fi" id="fe-name" placeholder="例：場地費訂金"/></div>
+      <div class="fg"><label class="fl">金額</label><input class="fi" id="fe-amt" type="number" placeholder="0"/></div>
+      <div class="fg"><label class="fl">狀態</label><select class="fsel" id="fe-status"><option value="paid">已付</option><option value="unpaid">未付</option></select></div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" onclick="saveExpense()">儲存</button><button class="btn-s" onclick="closeOv('ov-expense')">取消</button></div>
+  </div>
+</div>
+
+<!-- CASUAL SHEET -->
+<div class="overlay" id="ov-casual">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">新增臨打</div>
+    <div class="sh-body">
+      <div class="fg" id="fc-contact-group">
+        <label class="fl">從常用名單選擇</label>
+        <input class="fi" id="fc-contact-search" placeholder="🔍 搜尋名字..." oninput="filterCasualContacts()" style="margin-bottom:8px;font-size:14px"/>
+        <div class="contact-sel-list" id="fc-contact-list"></div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">— 或手動輸入 —</div>
+      </div>
+      <div class="fg"><label class="fl">姓名（可留空）</label><input class="fi" id="fc-name" placeholder="例：小明 / 代打"/></div>
+      <div class="fg"><label class="fl">費用</label><input class="fi" id="fc-fee" type="number" value="300"/></div>
+      <div class="fg"><label class="fl">備注</label><input class="fi" id="fc-note" placeholder="例：代替芷嫻"/></div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" onclick="saveCasual()">加入</button><button class="btn-s" onclick="closeOv('ov-casual')">取消</button></div>
+  </div>
+</div>
+
+<!-- CONTACT SHEET -->
+<div class="overlay" id="ov-contact">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="sh-contact-title">新增常用名單</div>
+    <div class="sh-body">
+      <div class="fg"><label class="fl">姓名</label><input class="fi" id="fco-name" placeholder="姓名"/></div>
+      <div class="fg"><label class="fl">電話（可選）</label><input class="fi" id="fco-phone" type="tel" placeholder="0912-345-678"/></div>
+      <div class="fg">
+        <label class="fl">聯絡方式（可選）</label>
+        <div style="display:flex;gap:8px">
+          <select class="fsel" id="fco-platform" style="width:110px;flex-shrink:0">
+            <option value="">--</option>
+            <option value="LINE">LINE</option>
+            <option value="Threads">Threads</option>
+            <option value="FB">Facebook</option>
+            <option value="IG">Instagram</option>
+            <option value="其他">其他</option>
+          </select>
+          <input class="fi" id="fco-note" placeholder="ID 或名稱" style="flex:1"/>
+        </div>
+      </div>
+    </div>
+    <div class="sh-footer"><button class="btn-p" onclick="saveContact()">儲存</button><button class="btn-s" onclick="closeOv('ov-contact')">取消</button></div>
+  </div>
+</div>
+
+<script>
+const SK='badminton_v3';
+let D={users:{},currentUser:null,teams:[],contacts:[]};
+let curTeamId=null,curSessId=null,curTab='sessions';
+let _homeTab='ongoing',_editSeasonId=null,_editMemberId=null,_editExpId=null,_memberSeasonId=null,_memberRangeType='full',_editContactId=null,_editTeamId=null,_lastMemberGroup=null;
+const WDAYS=['日','一','二','三','四','五','六'];
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const CATCOLS={'場地費':'#1a7a55','羽球':'#b45309','其他':'#1d4ed8'};
+
+function load(){try{const d=localStorage.getItem(SK);if(d)Object.assign(D,JSON.parse(d));}catch(e){}}
+function save(){try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtM(n){const a=Math.abs(Math.round(n));return(n<0?'-':'')+'$'+a.toLocaleString()}
+function fmtDS(s){if(!s)return'';const d=new Date(s);return`${d.getMonth()+1}/${d.getDate()}`}
+
+// LOGIN
+function doLogin(){
+  const em=document.getElementById('l-email').value.trim();
+  const pw=document.getElementById('l-pass').value;
+  const err=document.getElementById('l-err');
+  if(!em||!pw){err.style.display='block';err.textContent='請輸入 Email 和密碼';return;}
+  if(!D.users[em]){D.users[em]={password:pw,name:em.split('@')[0]};save();}
+  if(D.users[em].password!==pw){err.style.display='block';err.textContent='Email 或密碼錯誤';return;}
+  err.style.display='none';D.currentUser=em;save();showMain();
+}
+function doLogout(){D.currentUser=null;save();closePanel('acct');document.getElementById('main-screen').style.display='none';document.getElementById('login-screen').style.display='flex';}
+
+// PROFILE
+function openAcctPanel(){
+  const u=D.users[D.currentUser];
+  document.getElementById('pa-name').value=u?u.name:'';
+  document.getElementById('pa-email').textContent=D.currentUser||'';
+  const n=(u&&u.name)?u.name:'?';
+  document.getElementById('pa-avatar').textContent=n.charAt(0).toUpperCase();
+  renderNotifs();
+  document.getElementById('acct-panel').classList.add('open');
+  document.getElementById('acct-overlay').classList.add('open');
+}
+function saveProfile(){
+  const name=document.getElementById('pa-name').value.trim();
+  if(D.users[D.currentUser])D.users[D.currentUser].name=name||D.currentUser.split('@')[0];
+  save();closePanel('acct');renderHome();
+}
+function closePanel(id){document.getElementById(id+'-panel').classList.remove('open');document.getElementById(id+'-overlay').classList.remove('open');}
+
+// NOTIFICATIONS
+function getNotifs(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const notifs=[];
+  for(const t of D.teams){
+    for(const s of(t.seasons||[])){
+      for(const sess of(s.sessions||[])){
+        const d=new Date(sess.date);
+        if(d<now){
+          const ym=getYearM(t,sess.date);const sm=getSeasM(t,sess);const cas=sess.casual||[];const abs=sess.absent||[];
+          let hasUnpaid=false;
+          ym.forEach(m=>{if(!abs.includes(m.id)&&!(sess.checkedYear||[]).includes(m.id))hasUnpaid=true;});
+          sm.forEach(m=>{if(!abs.includes(m.id)&&!(sess.checkedSeason||[]).includes(m.id))hasUnpaid=true;});
+          cas.forEach(c=>{if(!c.paid)hasUnpaid=true;});
+          if(hasUnpaid)notifs.push({teamId:t.id,teamName:t.name,sessId:sess.id,date:sess.date,label:`${esc(t.name)} ${fmtDS(sess.date)} 尚未收齊錢`});
+        }
+      }
+    }
+  }
+  return notifs;
+}
+function renderNotifs(){
+  const notifs=getNotifs();
+  const el=document.getElementById('notif-list');
+  if(!notifs.length){el.innerHTML='<div class="notif-empty">✓ 沒有待處理通知</div>';return;}
+  el.innerHTML=notifs.map(n=>`<div class="notif-item" onclick="closePanel('acct');curTab='sessions';route('team','${n.teamId}');setTimeout(()=>route('session','${n.teamId}','${n.sessId}'),100)">
+    <div class="notif-dot"></div>
+    <div><div class="notif-text">${n.label}</div><div class="notif-date">${fmtDS(n.date)}</div></div>
+    <i class="ti ti-chevron-right" style="font-size:14px;color:var(--text3)"></i>
+  </div>`).join('');
+}
+function notifCount(){return getNotifs().length;}
+function updateNotifBadge(){
+  const c=notifCount();
+  const existing=document.getElementById('home-notif-badge');
+  if(!existing)return;
+  if(c>0){existing.style.display='flex';existing.textContent=c;}else{existing.style.display='none';}
+}
+
+// MAIN SCREEN
+function showMain(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-screen').style.display='flex';
+  document.getElementById('main-screen').style.flexDirection='column';
+  showPage('home');
+}
+function showPage(page){
+  ['home','analytics','calendar','contacts'].forEach(p=>{
+    document.getElementById('page-'+p).style.display=p===page?'block':'none';
+    document.getElementById('ftab-'+p).classList.toggle('act',p===page);
+  });
+  if(page==='home')renderHome();
+  else if(page==='analytics')renderAnalytics();
+  else if(page==='calendar')renderCalendar();
+  else if(page==='contacts')renderContacts();
+  document.getElementById('main-scroll').scrollTop=0;
+}
+
+// HOME PAGE
+function getUpcomingSessions(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const results=[];
+  for(const t of D.teams.filter(x=>!x.archived)){
+    for(const s of(t.seasons||[])){
+      for(const sess of(s.sessions||[])){
+        const d=new Date(sess.date);
+        if(d>=now)results.push({team:t,sess,date:d});
+      }
+    }
+  }
+  return results.sort((a,b)=>a.date-b.date).slice(0,1);
+}
+
+function renderHome(){
+  const now=new Date();
+  const u=D.users[D.currentUser];
+  const name=u&&u.name?u.name:D.currentUser.split('@')[0];
+  const h=now.getHours();const g=h<5?'Good Night':h<12?'Good Morning':h<17?'Good Afternoon':h<21?'Good Evening':'Good Night';
+  const dateStr=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 週${WDAYS[now.getDay()]}`;
+  const nc=notifCount();
+  const ongoing=[...D.teams].filter(t=>!t.archived).sort((a,b)=>{const na=nextDate(a),nb=nextDate(b);if(!na&&!nb)return 0;if(!na)return 1;if(!nb)return-1;return na-nb;});
+  const archived=D.teams.filter(t=>t.archived);
+  const upcoming=getUpcomingSessions();
+  const totalSessions=upcoming.length;
+
+  document.getElementById('page-home').innerHTML=`
+    <div class="home-header" id="home-hdr">
+      <div class="home-greeting">${g},</div>
+      <div class="home-name">${esc(name.charAt(0).toUpperCase()+name.slice(1))}</div>
+      <div class="home-date">${dateStr}</div>
+      <button class="home-acct-btn" onclick="openAcctPanel()" aria-label="帳號">
+        <i class="ti ti-user"></i>
+        <div class="notif-badge" id="home-notif-badge" style="display:${nc>0?'flex':'none'}">${nc}</div>
+      </button>
+    </div>
+
+    ${upcoming.length?`
+    <div class="home-sessions-title">Upcoming Sessions</div>
+    <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+      ${upcoming.map(({team,sess,date})=>{
+        const wd=WDAYS[date.getDay()];
+        const mo=MONTHS[date.getMonth()];
+        const ym=getYearM(team,sess.date);const sm=getSeasM(team,sess);
+        const abs=sess.absent||[];const cas=sess.casual||[];
+        const total=ym.length+sm.length+cas.length-abs.length;
+        const cap=(sess.perCourt||7)*(sess.courts||2);
+        const tColor=TEAM_COLORS_CAL[D.teams.filter(x=>!x.archived).findIndex(x=>x.id===team.id)%TEAM_COLORS_CAL.length];
+        return`<div onclick="route('session','${team.id}','${sess.id}')" style="background:var(--surface);border-radius:16px;padding:14px 16px;box-shadow:var(--sh);cursor:pointer;display:flex;align-items:center;gap:14px;transition:transform .1s;border-left:4px solid ${tColor}" ontouchstart="this.style.transform='scale(.98)'" ontouchend="this.style.transform=''">
+          <div style="flex-shrink:0;text-align:center;min-width:44px">
+            <div style="font-size:22px;font-weight:700;color:${tColor};line-height:1">${date.getDate()}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:1px">${mo.replace('月','')}</div>
+            <div style="font-size:10px;color:var(--text3)">週${wd}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:700;color:var(--text)">${esc(team.name)}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${team.startTime||''}${team.endTime?'–'+team.endTime:''} · ${total}/${cap}人</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;color:var(--text3)">${date-now<86400000?'<span style=color:var(--green);font-weight:600>今天</span>':date-now<172800000?'<span style=color:var(--amb);font-weight:600>明天</span>':''}</div>
+            <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:''}
+
+    <div style="padding:0 16px">
+      <div class="pill-tabs">
+        <button class="pill-tab pill-tab-ongoing${_homeTab==='ongoing'?' act':''}" onclick="setHomeTab('ongoing')">Ongoing</button>
+        <button class="pill-tab pill-tab-archived${_homeTab==='archived'?' act':''}" onclick="setHomeTab('archived')">Archived${archived.length?` (${archived.length})`:''}</button>
+      </div>
+      ${_homeTab==='ongoing'?`
+        ${ongoing.length?ongoing.map(t=>teamCardHTML(t)).join(''):`<div style="text-align:center;padding:32px 0;color:var(--text3);font-size:14px">還沒有球團</div>`}
+        <button class="add-team-btn" onclick="openTeamForm(null)"><i class="ti ti-plus"></i>新增球團</button>
+      `:`
+        ${archived.length?archived.map(t=>archivedCardHTML(t)).join(''):`<div style="text-align:center;padding:32px 0;color:var(--text3);font-size:14px">沒有封存的球團</div>`}
+      `}
+    </div>
+    <div style="height:24px"></div>`;
+
+  // Scroll shrink effect
+  const scr=document.getElementById('main-scroll');
+  const hdr=document.getElementById('home-hdr');
+  if(scr&&hdr){
+    scr.onscroll=()=>{
+      if(hdr)hdr.classList.toggle('scrolled',scr.scrollTop>40);
+    };
+  }
+}
+function setHomeTab(tab){_homeTab=tab;renderHome();}
+
+function archiveTeam(id){
+  const t=D.teams.find(x=>x.id===id);if(!t)return;
+  t.archived=true;save();_homeTab='ongoing';renderHome();
+}
+function unarchiveTeam(id){
+  const t=D.teams.find(x=>x.id===id);if(!t)return;
+  t.archived=false;save();_homeTab='ongoing';renderHome();
+}
+function archivedCardHTML(t){
+  const typeCls={year:'ty-year',season:'ty-season',casual:'ty-casual'}[t.type]||'';
+  const typeLabel={year:'年打',season:'季打',casual:'臨打'}[t.type]||'';
+  const stats=calcStats(t);
+  return`<div class="team-card" style="margin-bottom:10px;opacity:.75">
+    <div class="tc-top">
+      <div class="tc-name" onclick="curTab='sessions';route('team','${t.id}')" style="cursor:pointer">${esc(t.name)}</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="tc-type ${typeCls}">${typeLabel}</div>
+        <button onclick="openTeamForm('${t.id}')" class="ia" aria-label="編輯"><i class="ti ti-edit"></i></button>
+      </div>
+    </div>
+    <div class="tc-meta">${(t.days||[]).map(d=>'週'+WDAYS[d]).join('、')} ${t.startTime||''}${t.endTime?'–'+t.endTime:''} ${t.location?'· '+esc(t.location):''}</div>
+    <div class="tc-stats" onclick="curTab='sessions';route('team','${t.id}')" style="cursor:pointer">
+      <div class="tc-stat"><div class="tc-stat-val ${stats.balance<0?'red':'grn'}">${fmtM(stats.balance)}</div><div class="tc-stat-lbl">最終損益</div></div>
+      <div class="tc-stat"><div class="tc-stat-val">${(t.seasons||[]).length}</div><div class="tc-stat-lbl">季別數</div></div>
+    </div>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end">
+      <button onclick="unarchiveTeam('${t.id}')" style="font-size:12px;padding:6px 16px;border-radius:20px;border:1.5px solid var(--green-mid);background:none;color:var(--green);cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-weight:600">
+        <i class="ti ti-arrow-back-up" style="font-size:13px;margin-right:4px"></i>Back to Ongoing
+      </button>
+    </div>
+  </div>`;
+}
+
+function nextDate(t){const now=new Date();now.setHours(0,0,0,0);let e=null;for(const s of(t.seasons||[])){for(const ss of(s.sessions||[])){const d=new Date(ss.date);if(d>=now&&(!e||d<e))e=d;}}return e;}
+
+function teamCardHTML(t){
+  const nd=nextDate(t);
+  const typeCls={year:'ty-year',season:'ty-season',casual:'ty-casual'}[t.type]||'';
+  const typeLabel={year:'年打',season:'季打',casual:'臨打'}[t.type]||'';
+  const dayStr=(t.days||[]).map(d=>'週'+WDAYS[d]).join('、');
+  const stats=calcStats(t);
+  const upcoming=nd&&(nd-new Date())<172800000;
+  let nxt='';if(nd){const diff=Math.ceil((nd-new Date())/86400000);nxt=diff<=0?'今天！':diff===1?'明天 '+fmtDS(nd):'下場 '+fmtDS(nd);}
+  return`<div class="team-card${upcoming?' upcoming':''}" style="margin-bottom:10px">
+    <div class="tc-top">
+      <div class="tc-name" onclick="curTab='sessions';route('team','${t.id}')" style="cursor:pointer">${esc(t.name)}</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="tc-type ${typeCls}">${typeLabel}</div>
+        <button onclick="openTeamForm('${t.id}')" class="ia" aria-label="編輯"><i class="ti ti-edit"></i></button>
+      </div>
+    </div>
+    <div class="tc-meta" onclick="curTab='sessions';route('team','${t.id}')" style="cursor:pointer">${dayStr} ${t.startTime||''}${t.endTime?'–'+t.endTime:''} ${t.location?'· '+esc(t.location):''}</div>
+    ${nxt?`<div class="tc-next" onclick="curTab='sessions';route('team','${t.id}')" style="cursor:pointer">${nxt}</div>`:''}
+    <div class="tc-stats" onclick="curTab='sessions';route('team','${t.id}')" style="cursor:pointer">
+      <div class="tc-stat"><div class="tc-stat-val ${stats.balance<0?'red':'grn'}">${fmtM(stats.balance)}</div><div class="tc-stat-lbl">目前損益</div></div>
+      <div class="tc-stat"><div class="tc-stat-val">${(t.seasons||[]).length}</div><div class="tc-stat-lbl">季別數</div></div>
+    </div>
+    <div style="margin-top:6px;display:flex;justify-content:flex-end">
+      <button onclick="event.stopPropagation();archiveTeam('${t.id}')" style="font-size:12px;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border2);background:none;color:var(--text3);cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-weight:500;display:flex;align-items:center;gap:4px"><i class="ti ti-archive" style="font-size:13px"></i>Archive</button>
+    </div>
+  </div>`;
+}
+
+// TEAM PAGE
+function route(view,a,b){
+  if(view==='home'){curTeamId=null;curSessId=null;showPage('home');}
+  else if(view==='team'){renderTeamPage(a);}
+  else if(view==='session'){renderSessionPage(a,b);}
+}
+function renderTeamPage(id){
+  if(id!==curTeamId)_lastMemberGroup=null; // reset when switching teams
+  curTeamId=id;
+  const t=D.teams.find(x=>x.id===id);if(!t)return showPage('home');
+  const page=document.getElementById('page-home');
+  const typeLabel={year:'年打',season:'季打',casual:'臨打'}[t.type]||'';
+  page.innerHTML=`
+    <div class="topbar">
+      <button class="back-btn" onclick="showPage('home')" aria-label="返回"><i class="ti ti-arrow-left"></i></button>
+      <div style="flex:1"><div class="topbar-title">${esc(t.name)}</div><div class="topbar-sub">${typeLabel}${t.location?' · '+esc(t.location):''}</div></div>
+      <button class="ia" style="font-size:18px" onclick="if(confirm('確定刪除此球團？')){D.teams=D.teams.filter(x=>x.id!=='${id}');save();showPage('home')}" aria-label="刪除"><i class="ti ti-trash"></i></button>
+      <button class="topbar-acct-btn" onclick="openAcctPanel()" aria-label="帳號" id="tb-notif-${id}"><i class="ti ti-user-circle"></i><span class="tb-notif-dot" style="display:${notifCount()>0?'flex':'none'}">${notifCount()}</span></button>
+    </div>
+    <div class="tabs" id="team-tabs">
+      <button class="tab" id="tab-overview" onclick="setTab('overview')">總覽</button>
+      <button class="tab" id="tab-sessions" onclick="setTab('sessions')">場次</button>
+      <button class="tab" id="tab-expenses" onclick="setTab('expenses')">費用</button>
+      <button class="tab" id="tab-members" onclick="setTab('members')">成員</button>
+    </div>
+    <div id="team-content"></div>`;
+  setTab(curTab);
+}
+function setTab(tab){
+  curTab=tab;
+  ['overview','sessions','expenses','members'].forEach(t=>{const el=document.getElementById('tab-'+t);if(el)el.classList.toggle('act',t===tab);});
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  const el=document.getElementById('team-content');if(!el)return;
+  if(tab==='overview')el.innerHTML=renderOverview(t);
+  else if(tab==='sessions')el.innerHTML=renderSessions(t);
+  else if(tab==='expenses')el.innerHTML=renderExpenses(t);
+  else if(tab==='members')el.innerHTML=renderMembers(t);
+}
+
+function renderOverview(t){
+  const s=calcStats(t);
+  const expByCat={};for(const e of(t.expenses||[])){expByCat[e.cat]=(expByCat[e.cat]||0)+Number(e.amount);}
+  const totalExp=Object.values(expByCat).reduce((a,b)=>a+b,0)||1;
+  const incomeMax=Math.max(s.yearIncome,s.seasonIncome,s.casualIncome,1);
+  // color palette from image
+  const INC_COLS=['#8AAB93','#A1C2CB','#CBAF79'];
+  const EXP_COLS={'場地費':'#A8AFB5','羽球':'#CBAF79','其他':'#C9CADE'};
+  return`
+  <div style="padding:14px 16px 0">
+
+    <!-- Donut chart card -->
+    ${(()=>{
+      const total=Math.max(s.expenses,1);
+      const collectedPct=Math.min(s.collected/total,1);
+      const r=52;const circ=2*Math.PI*r;
+      const collectedDash=collectedPct*circ;
+      const remainDash=circ-collectedDash;
+      const balColor=s.balance>=0?'#8AAB93':'#DF978A';
+      const R=72;const C=2*Math.PI*R;const sz=180;const cx=sz/2;
+      const cDash=collectedPct*C;const rDash=C-cDash;
+      return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 18px;margin-bottom:12px">
+        <!-- Donut centered -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
+          <div style="position:relative;width:${sz}px;height:${sz}px">
+            <svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">
+              <circle cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="#EEF0F2" stroke-width="18"/>
+              <circle cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="#8AAB93" stroke-width="18"
+                stroke-dasharray="${cDash} ${rDash}"
+                stroke-dashoffset="${C*0.25}"
+                stroke-linecap="round"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+              <div style="font-size:18px;font-weight:700;color:${balColor};line-height:1.1">${s.balance>=0?'+':''}${fmtM(s.balance)}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">目前損益</div>
+            </div>
+          </div>
+          <!-- Legend row -->
+          <div style="display:flex;justify-content:center;gap:24px;width:100%">
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="width:11px;height:11px;border-radius:50%;background:#8AAB93;flex-shrink:0"></div>
+              <div>
+                <div style="font-size:10px;color:var(--text3)">已收款</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text)">${fmtM(s.collected)}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="width:11px;height:11px;border-radius:50%;background:#D8DCDE;flex-shrink:0"></div>
+              <div>
+                <div style="font-size:10px;color:var(--text3)">總支出</div>
+                <div style="font-size:14px;font-weight:700;color:var(--text)">${fmtM(s.expenses)}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <div style="width:11px;height:11px;border-radius:50%;background:${balColor};flex-shrink:0"></div>
+              <div>
+                <div style="font-size:10px;color:var(--text3)">損益</div>
+                <div style="font-size:14px;font-weight:700;color:${balColor}">${s.balance>=0?'+':''}${fmtM(s.balance)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    })()}
+
+    <!-- Income breakdown -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">收入來源</div>
+      ${[['年繳',s.yearIncome,INC_COLS[0]],['季繳',s.seasonIncome,INC_COLS[1]],['臨打',s.casualIncome,INC_COLS[2]]].filter(([,v])=>v>0).map(([l,v,c])=>{
+        const w=Math.round(v/incomeMax*100);
+        return`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);margin-bottom:5px"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${l}</span><span style="font-weight:600">${fmtM(v)}</span></div>
+          <div style="height:7px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${w}%;background:${c};border-radius:4px"></div></div>
+        </div>`;
+      }).join('')}
+      ${s.yearIncome+s.seasonIncome+s.casualIncome===0?'<div style="font-size:13px;color:var(--text3)">尚無收入資料</div>':''}
+    </div>
+
+    <!-- Expense breakdown -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">支出分類</div>
+      ${Object.keys(expByCat).length?
+        Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>{
+          const w=Math.round(v/totalExp*100);const c=EXP_COLS[cat]||'#C9CADE';
+          return`<div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text);margin-bottom:5px"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${cat}</span><span style="font-weight:600">${fmtM(v)}</span></div>
+            <div style="height:7px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${w}%;background:${c};border-radius:4px"></div></div>
+          </div>`;
+        }).join('')
+        :'<div style="font-size:13px;color:var(--text3)">尚無費用記錄</div>'}
+    </div>
+
+  </div>
+  <div style="height:16px"></div>`;
+}
+
+function renderSessions(t){
+  if(!(t.seasons&&t.seasons.length)){return`<div class="empty"><i class="ti ti-calendar"></i><p>還沒有場次<br>點下方 + 新增季別</p></div><button class="fab" onclick="openSeasonForm(null)"><i class="ti ti-plus"></i></button>`;}
+  let html='<div style="height:10px"></div>';
+  const S_COLORS=['#8B9E8A', '#B89D8C', '#C4A09A', '#A8A090', '#C8A882', '#B0907A'];
+  const S_BGS=['#DDE5DB', '#EDE3DC', '#EFE0DC', '#E3DFDA', '#F0E4D4', '#E8DCD4'];
+  t.seasons.forEach((s,si)=>{
+    const open=s._open!==false;
+    const cnt=(s.sessions||[]).length;
+    const sCol=S_COLORS[si%S_COLORS.length];
+    const sBg=S_BGS[si%S_BGS.length];
+    html+=`<div class="section season-block">
+      <div class="season-hd" onclick="toggleSeason('${s.id}')" style="border-left:3px solid ${sCol};background:${sBg}">
+        <i class="ti ti-chevron-right s-arrow${open?' open':''}"></i>
+        <div class="s-hd-info"><div class="s-hd-name">${esc(s.name)}</div><div class="s-hd-meta">${cnt}場 · ${s.startDate?fmtDS(s.startDate):''}${s.endDate?' – '+fmtDS(s.endDate):''}</div></div>
+        <div class="icon-row" onclick="event.stopPropagation()">
+          <button class="ia" onclick="openSeasonForm('${s.id}')" aria-label="編輯"><i class="ti ti-edit"></i></button>
+          <button class="ia" onclick="if(confirm('確定刪除此季別？')){const t=D.teams.find(x=>x.id===curTeamId);if(t){t.seasons=t.seasons.filter(x=>x.id!=='${s.id}');save();setTab('sessions');}}" aria-label="刪除"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="season-body${open?' open':''}" id="sb-${s.id}" style="border-left:3px solid ${sCol}26;margin-left:3px">
+        ${cnt?(s.sessions||[]).sort((a,b)=>a.date.localeCompare(b.date)).map(sess=>sessCardHTML(sess,t)).join(''):'<div style="font-size:13px;color:var(--text3);padding:6px 0">尚無場次</div>'}
+      </div>
+    </div>`;
+  });
+  html+=`<div style="height:16px"></div><button class="fab" onclick="openSeasonForm(null)"><i class="ti ti-plus"></i></button>`;
+  return html;
+}
+function toggleSeason(sid){
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  const s=(t.seasons||[]).find(x=>x.id===sid);if(!s)return;
+  s._open=s._open===false?true:false;save();
+  const body=document.getElementById('sb-'+sid);if(!body)return;
+  body.classList.toggle('open',s._open!==false);
+  const hd=body.previousElementSibling;if(hd){const arr=hd.querySelector('.s-arrow');if(arr)arr.classList.toggle('open',s._open!==false);}
+}
+function sessCardHTML(sess,t){
+  const d=new Date(sess.date);
+  const ym=getYearM(t,sess.date);const sm=getSeasM(t,sess);
+  const abs=sess.absent||[];const cas=sess.casual||[];
+  const cap=(sess.perCourt||7)*(sess.courts||2);
+  const confirmed=ym.length+sm.length-abs.length;
+  const needed=Math.max(0,cap-confirmed-cas.length);
+  const extra=sess.extra?`<div class="pill p-gray">${esc(sess.note||'加場')}</div>`:'';
+  return`<div class="sess-card" onclick="route('session','${t.id}','${sess.id}')">
+    <div class="sc-date"><div class="sc-day">${d.getDate()}</div><div class="sc-mon">${MONTHS[d.getMonth()]}</div><div class="sc-wd">週${WDAYS[d.getDay()]}</div></div>
+    <div class="sc-right">
+      <div class="sc-title">${sess.courts||2}場地·${sess.perCourt||7}人/場·上限${cap}人</div>
+      <div class="sc-meta">${t.startTime||''}${t.endTime?'–'+t.endTime:''}</div>
+      <div class="sc-pills">
+        <div class="pill p-grn">年繳 ${ym.length}人</div>
+        <div class="pill p-blu">季繳 ${sm.length}人</div>
+        ${cas.length?`<div class="pill p-amb">臨打 ${cas.length}人</div>`:''}
+        ${needed>0?`<div class="pill p-red">缺 ${needed}人</div>`:''}
+        ${abs.length?`<div class="pill p-gray">假 ${abs.length}人</div>`:''}
+        ${extra}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+      <button onclick="event.stopPropagation();openAdjustCourts('${sess.id}')" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;font-family:'Noto Sans TC',sans-serif;white-space:nowrap">+場地</button>
+      <button onclick="event.stopPropagation();if(confirm('確定刪除？')){const t=D.teams.find(x=>x.id===curTeamId);if(t){for(const s of t.seasons)s.sessions=s.sessions.filter(x=>x.id!=='${sess.id}');save();setTab('sessions');}}" class="ia" style="padding:6px" aria-label="刪除"><i class="ti ti-trash"></i></button>
+    </div>
+  </div>`;
+}
+
+function renderExpenses(t){
+  const exp=t.expenses||[];const total=exp.reduce((a,e)=>a+Number(e.amount),0);
+  return`<div style="height:10px"></div><div class="section">
+    <div class="sh"><div><div class="st">費用記錄</div><div style="font-size:11px;color:var(--text3);margin-top:2px">合計 ${fmtM(total)}</div></div><button class="btn-sm" onclick="openExpForm()">+ 新增</button></div>
+    ${exp.length?`<div class="ml" style="border-radius:var(--r);overflow:hidden">${exp.map(e=>`<div class="exp-row">
+      <div class="exp-dot" style="background:${CATCOLS[e.cat]||'#888'}"></div>
+      <div class="exp-info"><div class="exp-name">${esc(e.name)}</div><div class="exp-cat">${e.cat}</div></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div class="exp-amt">-${fmtM(Number(e.amount))}</div>
+        <span class="${e.status==='paid'?'pill p-grn':'pill p-gray'}">${e.status==='paid'?'已付':'未付'}</span>
+        <button onclick="openExpForm('${e.id}')" class="ia"><i class="ti ti-edit"></i></button>
+        <button onclick="if(confirm('確定刪除？')){const t=D.teams.find(x=>x.id===curTeamId);if(t){t.expenses=t.expenses.filter(x=>x.id!=='${e.id}');save();setTab('expenses');}}" class="ia"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`).join('')}</div>`:'<div style="font-size:13px;color:var(--text3);padding:8px 0">尚無費用記錄</div>'}
+  </div><div style="height:16px"></div>`;
+}
+
+function renderMembers(t){
+  // Casual teams: no members at all
+  if(t.type==='casual'){
+    return`<div class="empty"><i class="ti ti-user-off"></i><p>臨打球團不需要固定成員<br>請直接在場次中新增臨打</p></div>`;
+  }
+  // Season teams with no seasons yet
+  if(t.type==='season'&&!(t.seasons&&t.seasons.length)){
+    return`<div class="empty"><i class="ti ti-calendar-plus"></i><p>請先在「場次」tab 新增季別<br>再來新增季繳成員</p></div>`;
+  }
+  const yearM=(t.members||[]).filter(m=>m.role==='year');
+  // For season teams: always keep the last opened season open,
+  // or default to first season if nothing opened yet.
+  // For year teams: default to year section.
+  if(!_lastMemberGroup||(_lastMemberGroup==='year'&&t.type==='season')){
+    if(t.type==='year')_lastMemberGroup='year';
+    else if(t.seasons&&t.seasons.length)_lastMemberGroup=t.seasons[0].id;
+    else _lastMemberGroup=null;
+  }
+  const yearOpen=_lastMemberGroup==='year';
+  let html='<div style="height:10px"></div>';
+  // Year teams: show year member section
+  if(t.type==='year'){
+  html+=`<div class="acc-hd year-hd${yearOpen?' open':''}" id="acc-hd-year" onclick="toggleAcc('year','year')">
+    <i class="ti ti-chevron-right acc-arrow${yearOpen?' open':''}" id="acc-arrow-year"></i>
+    <div class="acc-title">年繳成員（${yearM.length}人）</div>
+    <button class="btn-sm" onclick="event.stopPropagation();openMemberForm('year',null)">+ 新增</button>
+  </div>
+  <div class="acc-body year-bd${yearOpen?' open':''}" id="acc-body-year">
+    ${yearM.length?`<div class="ml">${yearM.map(m=>{
+      const n=cntMSess(t,m);const tot=n*Number(m.fee);
+      const rl=m.rangeType==='full'?'完整年繳':`${m.from?fmtDS(m.from):''}${m.to?' – '+fmtDS(m.to):''}`;
+      return`<div class="ml-row"><div class="avatar av-g">${esc(m.name.slice(0,1))}</div>
+        <div class="ml-info"><div class="ml-name">${esc(m.name)}</div><div class="ml-sub">$${m.fee}/場 · ${rl} · ${n}場 · ${fmtM(tot)}</div>${m.note?`<div class="ml-sub">${esc(m.note)}</div>`:''}</div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <button class="${m.paid?'pill p-grn':'btn-smo'} paid-badge-btn" style="font-size:11px;padding:4px 9px;border-radius:20px" onclick="toggleMPaid('${m.id}',null)">${m.paid?'已繳':'未繳'}</button>
+          <button onclick="openMemberForm('year',null,'${m.id}')" class="ia"><i class="ti ti-edit"></i></button>
+          <button onclick="if(confirm('確定刪除？')){const t=D.teams.find(x=>x.id===curTeamId);t.members=t.members.filter(x=>x.id!=='${m.id}');save();setTab('members');}" class="ia"><i class="ti ti-trash"></i></button>
+        </div></div>`;
+    }).join('')}</div>`:'<div style="padding:10px 16px;font-size:13px;color:var(--text3)">尚無年繳成員</div>'}
+  </div>`;
+  } // end if year
+  const SCOLS=['s0','s1','s2','s3','s4','s5'];
+  (t.seasons||[]).forEach((s,si)=>{
+    const sm=s.members||[];
+    const sc=SCOLS[si%SCOLS.length];
+    const sOpen=_lastMemberGroup===s.id;
+    html+=`<div class="acc-hd ${sc}${sOpen?' open':''}" id="acc-hd-${s.id}" onclick="toggleAcc('${s.id}','${s.id}')">
+      <i class="ti ti-chevron-right acc-arrow${sOpen?' open':''}" id="acc-arrow-${s.id}"></i>
+      <div class="acc-title">季繳 — ${esc(s.name)}（${sm.length}人）</div>
+      <button class="btn-sm" onclick="event.stopPropagation();openMemberForm('season','${s.id}')">+ 新增</button>
+    </div>
+    <div class="acc-body ${sc}b${sOpen?' open':''}" id="acc-body-${s.id}">
+      ${sm.length?`<div class="ml">${sm.map(m=>{
+        const n=cntSMSess(t,s,m);const tot=n*Number(m.fee);
+        const rl=m.rangeType==='full'?`完整${esc(s.name)}`:`${m.from?fmtDS(m.from):''}${m.to?' – '+fmtDS(m.to):''}`;
+        return`<div class="ml-row"><div class="avatar av-b">${esc(m.name.slice(0,1))}</div>
+          <div class="ml-info"><div class="ml-name">${esc(m.name)}</div><div class="ml-sub">$${m.fee}/場 · ${rl} · ${n}場 · ${fmtM(tot)}</div>${m.note?`<div class="ml-sub">${esc(m.note)}</div>`:''}</div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+            <button class="${m.paid?'pill p-grn':'btn-smo'} paid-badge-btn" style="font-size:11px;padding:4px 9px;border-radius:20px" onclick="toggleMPaid('${m.id}','${s.id}')">${m.paid?'已繳':'未繳'}</button>
+            <button onclick="openMemberForm('season','${s.id}','${m.id}')" class="ia"><i class="ti ti-edit"></i></button>
+            <button onclick="if(confirm('確定刪除？')){const t=D.teams.find(x=>x.id===curTeamId);const s=t.seasons.find(x=>x.id==='${s.id}');if(s){s.members=s.members.filter(x=>x.id!=='${m.id}');save();setTab('members');}}" class="ia"><i class="ti ti-trash"></i></button>
+          </div></div>`;
+      }).join('')}</div>`:'<div style="padding:10px 16px;font-size:13px;color:var(--text3)">尚無季繳成員</div>'}
+    </div>`;
+  });
+  html+=`<div style="height:16px"></div>`;return html;
+}
+function toggleAcc(id,groupId){
+  const hd=document.getElementById('acc-hd-'+id);const body=document.getElementById('acc-body-'+id);const arrow=document.getElementById('acc-arrow-'+id);
+  if(!body)return;const open=body.classList.toggle('open');if(hd)hd.classList.toggle('open',open);if(arrow)arrow.classList.toggle('open',open);
+  if(groupId&&open)_lastMemberGroup=groupId;
+}
+
+// SESSION DETAIL
+function renderSessionPage(teamId,sessId){
+  curTeamId=teamId;curSessId=sessId;
+  const t=D.teams.find(x=>x.id===teamId);if(!t)return showPage('home');
+  let sess=null;for(const s of(t.seasons||[])){const f=s.sessions.find(x=>x.id===sessId);if(f){sess=f;break;}}
+  if(!sess)return route('team',teamId);
+  const d=new Date(sess.date);
+  const ym=getYearM(t,sess.date);const sm=getSeasM(t,sess);
+  const abs=sess.absent||[];const cas=sess.casual||[];
+  const cap=(sess.perCourt||7)*(sess.courts||2);
+  const needed=Math.max(0,cap-ym.length-sm.length+abs.length-cas.length);
+  let col=0;
+  ym.forEach(m=>{if(!abs.includes(m.id)&&(sess.checkedYear||[]).includes(m.id))col+=Number(m.fee);});
+  sm.forEach(m=>{if(!abs.includes(m.id)&&(sess.checkedSeason||[]).includes(m.id))col+=Number(m.fee);});
+  cas.forEach(c=>{if(c.paid)col+=Number(c.fee);});
+  const page=document.getElementById('page-home');
+  page.innerHTML=`
+    <div class="topbar"><button class="back-btn" onclick="route('team','${t.id}')" aria-label="返回"><i class="ti ti-arrow-left"></i></button><div style="flex:1"><div class="topbar-title">${d.getMonth()+1}/${d.getDate()} 場次管理</div><div class="topbar-sub">${esc(t.name)}</div></div><button class="topbar-acct-btn" onclick="openAcctPanel()" aria-label="帳號"><i class="ti ti-user-circle"></i><span class="tb-notif-dot" style="display:${notifCount()>0?'flex':'none'}">${notifCount()}</span></button></div>
+    <div class="sess-hdr">
+      <div class="sess-hdr-date">${d.getFullYear()}年${MONTHS[d.getMonth()]}${d.getDate()}日（週${WDAYS[d.getDay()]}）${sess.extra?` <span class="pill p-gray">${esc(sess.note||'加場')}</span>`:''}</div>
+      <div class="sess-hdr-meta">${t.startTime||''}${t.endTime?'–'+t.endTime:''} · ${sess.courts||2}場地 · 每場${sess.perCourt||7}人 · 上限${cap}人</div>
+      <div class="sess-summary">
+        <div class="ss-card"><div class="ss-val">${ym.length+sm.length+cas.length-abs.length}</div><div class="ss-lbl">今日人數</div></div>
+        <div class="ss-card"><div class="ss-val" style="color:${needed>0?'var(--amb)':'var(--green)'}">${needed>0?needed+'缺':'滿場'}</div><div class="ss-lbl">臨打名額</div></div>
+        <div class="ss-card"><div class="ss-val grn">$${col}</div><div class="ss-lbl">已收</div></div>
+      </div>
+    </div>
+    <div class="att-sec-hd"><div class="att-sec-title">年繳</div></div>
+    <div class="att-list">${ym.map(m=>{
+      const isA=abs.includes(m.id);const isC=!isA&&(sess.checkedYear||[]).includes(m.id);
+      return`<div class="att-row"><div class="avatar av-g">${esc(m.name.slice(0,1))}</div>
+        <div class="att-info"><div class="att-name">${esc(m.name)}</div><div class="att-sub">${isA?'請假中':'年繳 · $'+m.fee+(m.paid?' · 已繳費':'')}</div></div>
+        ${isA?`<span style="font-size:11px;color:var(--red);font-weight:700;margin-right:4px">退$${m.fee}</span><button onclick="setAbs('${m.id}',false,false)" class="btn-ds">取消請假</button>`
+          :`<div class="att-amt">$${m.fee}</div><button class="chk${isC?' on':''}" onclick="toggleYC('${m.id}')" aria-label="收費"><i class="ti ti-check"></i></button><button onclick="setAbs('${m.id}',true,false)" class="ia" aria-label="請假"><i class="ti ti-user-off"></i></button>`}
+      </div>`;}).join('')}</div>
+    <div class="att-sec-hd"><div class="att-sec-title">季繳</div></div>
+    <div class="att-list">${sm.length?sm.map(m=>{
+      const isA=abs.includes(m.id);const isC=!isA&&(sess.checkedSeason||[]).includes(m.id);
+      return`<div class="att-row"><div class="avatar av-b">${esc(m.name.slice(0,1))}</div>
+        <div class="att-info"><div class="att-name">${esc(m.name)}</div><div class="att-sub">${isA?'請假中':'季繳 · $'+m.fee+(m.paid?' · 已繳費':'')}</div></div>
+        ${isA?`<span style="font-size:11px;color:var(--red);font-weight:700;margin-right:4px">退$${m.fee}</span><button onclick="setAbs('${m.id}',false,true)" class="btn-ds">取消請假</button>`
+          :`<div class="att-amt">$${m.fee}</div><button class="chk${isC?' on':''}" onclick="toggleSC('${m.id}')" aria-label="收費"><i class="ti ti-check"></i></button><button onclick="setAbs('${m.id}',true,true)" class="ia" aria-label="請假"><i class="ti ti-user-off"></i></button>`}
+      </div>`;}).join(''):`<div class="att-row" style="color:var(--text3);font-size:13px">本場無季繳成員</div>`}</div>
+    <div class="att-sec-hd"><div class="att-sec-title">臨打（${cas.length}）${needed>0?' · 缺'+needed+'人':''}</div><button class="lk" onclick="openCasualForm()">+ 新增</button></div>
+    <div class="att-list">${cas.length?cas.map((c,i)=>`<div class="att-row">
+      <div class="avatar av-a">${c.name?esc(c.name.slice(0,1)):'臨'}</div>
+      <div class="att-info"><div class="att-name">${c.name?esc(c.name):'臨打'}</div><div class="att-sub">${c.note?esc(c.note):'臨打'}</div></div>
+      <div class="att-amt">$${c.fee}</div>
+      <button class="chk${c.paid?' on':''}" onclick="toggleCP(${i})" aria-label="收費"><i class="ti ti-check"></i></button>
+      <button onclick="delCasual(${i})" class="ia"><i class="ti ti-trash"></i></button>
+    </div>`).join(''):`<div class="att-row" style="color:var(--text3);font-size:13px">尚無臨打</div>`}</div>
+    <div style="height:24px"></div>`;
+}
+
+// ANALYTICS PAGE
+function renderAnalytics(){
+  let totalCol=0,totalExp=0,totalYI=0,totalSI=0,totalCI=0;
+  for(const t of D.teams){const s=calcStats(t);totalCol+=s.collected;totalExp+=s.expenses;totalYI+=s.yearIncome;totalSI+=s.seasonIncome;totalCI+=s.casualIncome;}
+  const totalBal=totalCol-totalExp;const totalProj=totalYI+totalSI+totalCI-totalExp;
+
+  // attendance by contact - only count past sessions (up to today)
+  const todayMs=new Date();todayMs.setHours(23,59,59,999);
+  const contactAtt={};
+  for(const c of(D.contacts||[]))contactAtt[c.id]={name:c.name,present:0,absent:0};
+  for(const t of D.teams){
+    for(const s of(t.seasons||[])){
+      for(const sess of(s.sessions||[])){
+        if(new Date(sess.date)>todayMs)continue; // skip future sessions
+        const ym=getYearM(t,sess.date);const sm=getSeasM(t,sess);const abs=sess.absent||[];
+        [...ym,...sm].forEach(m=>{
+          const c=D.contacts.find(x=>x.name===m.name);
+          if(c){if(abs.includes(m.id))contactAtt[c.id].absent++;else contactAtt[c.id].present++;}
+        });
+        (sess.casual||[]).forEach(c=>{
+          if(!c.name)return;
+          const contact=D.contacts.find(x=>x.name===c.name);
+          if(contact){contactAtt[contact.id].present++;}
+        });
+      }
+    }
+  }
+  const sortedContacts=Object.values(contactAtt).filter(x=>x.present+x.absent>0).sort((a,b)=>b.present-a.present);
+  const maxPres=Math.max(...sortedContacts.map(x=>x.present),1);
+
+  // per-team attendance
+  const teamAtts=D.teams.map(t=>{
+    const membersByName={};let totalPastSess=0;
+    for(const s of(t.seasons||[])){
+      for(const sess of(s.sessions||[])){
+        if(new Date(sess.date)>todayMs)continue;
+        totalPastSess++;
+        const abs=sess.absent||[];
+        const all=[...getYearM(t,sess.date),...getSeasM(t,sess)];
+        all.forEach(m=>{
+          // deduplicate by name (same person may appear in multiple seasons)
+          const key=m.name;
+          if(!membersByName[key])membersByName[key]={name:m.name,present:0,absent:0};
+          if(abs.includes(m.id))membersByName[key].absent++;else membersByName[key].present++;
+        });
+        (sess.casual||[]).forEach(c=>{
+          if(!c.name)return;
+          const key=c.name;
+          if(!membersByName[key])membersByName[key]={name:c.name,present:0,absent:0};
+          membersByName[key].present++;
+        });
+      }
+    }
+    return{team:t,totalPastSess,members:Object.values(membersByName).sort((a,b)=>b.present-a.present)};
+  }).filter(x=>x.members.length);
+
+  const nc2=notifCount();
+  document.getElementById('page-analytics').innerHTML=`
+    <div style="padding-bottom:90px">
+      <div class="topbar" style="position:sticky;top:0;z-index:10"><div class="topbar-title">統計</div><button class="topbar-acct-btn" onclick="openAcctPanel()" aria-label="帳號"><i class="ti ti-user-circle"></i><span class="tb-notif-dot" style="display:${nc2>0?'flex':'none'}">${nc2}</span></button></div>
+      <div class="analytics-total">
+        <div class="at-title">所有球團總覽</div>
+        <div class="at-grid">
+          <div class="at-card"><div class="at-lbl">總收入</div><div class="at-val">$${totalCol.toLocaleString()}</div></div>
+          <div class="at-card"><div class="at-lbl">總支出</div><div class="at-val">$${totalExp.toLocaleString()}</div></div>
+          <div class="at-card"><div class="at-lbl">目前損益</div><div class="at-val ${totalBal>=0?'pos':'neg'}">${fmtM(totalBal)}</div></div>
+
+        </div>
+      </div>
+
+      ${sortedContacts.length?`
+      <div class="acc-hd open" id="acc-hd-contacts-att" onclick="toggleAcc('contacts-att')">
+        <i class="ti ti-chevron-right acc-arrow open" id="acc-arrow-contacts-att"></i>
+        <div class="acc-title">常用名單出勤（${sortedContacts.length}人）</div>
+      </div>
+      <div class="acc-body open" id="acc-body-contacts-att">
+        <div style="padding:8px 16px 12px"><div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px">${sortedContacts.map(x=>`
+          <div class="bar-row">
+            <div class="bar-label">${esc(x.name)}</div>
+            <div class="bar-track" style="background:#e5e5e5"><div class="bar-fill" style="width:${Math.round(x.present/maxPres*100)}%;background:var(--green)"></div></div>
+            <div class="bar-val" style="font-size:11px">${x.present}場</div>
+          </div>`).join('')}
+        </div></div>
+      </div>`:''}
+
+      ${teamAtts.map(({team,members,totalPastSess})=>{
+        const maxP=Math.max(...members.map(x=>x.present),1);
+        return`<div class="acc-hd" id="acc-hd-att-${team.id}" onclick="toggleAcc('att-${team.id}')">
+          <i class="ti ti-chevron-right acc-arrow" id="acc-arrow-att-${team.id}"></i>
+          <div class="acc-title">${esc(team.name)}出勤</div>
+        </div>
+        <div class="acc-body" id="acc-body-att-${team.id}">
+          <div style="padding:8px 16px 12px"><div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px">${members.map(m=>`
+            <div class="bar-row">
+              <div class="bar-label">${esc(m.name)}</div>
+              <div class="bar-track" style="background:#e5e5e5"><div class="bar-fill" style="width:${Math.round(m.present/Math.max(totalPastSess,1)*100)}%;background:var(--blue)"></div></div>
+              <div class="bar-val" style="font-size:11px">${m.present}<span style="color:var(--text3)">/${totalPastSess}</span>${m.absent?` <span style="color:#e57373;font-size:10px">假${m.absent}</span>`:''}</div>
+            </div>`).join('')}
+          </div></div>
+        </div>`;
+      }).join('')}
+      <div style="height:16px"></div>
+    </div>`;
+}
+
+// CONTACTS PAGE
+function renderContacts(){
+  const contacts=D.contacts||[];
+  document.getElementById('page-contacts').innerHTML=`
+    <div class="topbar"><div class="topbar-title">常用名單</div><button class="icon-btn" onclick="openContactForm(null)" aria-label="新增"><i class="ti ti-plus"></i></button><button class="topbar-acct-btn" onclick="openAcctPanel()" aria-label="帳號"><i class="ti ti-user-circle"></i><span class="tb-notif-dot" style="display:${notifCount()>0?'flex':'none'}">${notifCount()}</span></button></div>
+    <div style="padding:10px 16px 0"><input class="fi" id="contacts-search" placeholder="🔍 搜尋名字或聯絡方式..." oninput="filterContacts()" style="font-size:14px"/></div>
+    <div style="height:10px"></div>
+    <div class="ml" id="contacts-list" style="margin:0 16px;border-radius:var(--r);overflow:hidden">
+      ${contacts.length?contacts.map(c=>`
+      <div class="contact-row">
+        <div class="avatar av-g" style="flex-shrink:0">${esc(c.name.slice(0,1))}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500;color:var(--text)">${esc(c.name)}</div>
+          ${c.phone?`<div style="font-size:11px;color:var(--text3)">${esc(c.phone)}</div>`:''}
+          ${(c.platform&&c.note)?`<div style="font-size:11px;color:var(--text3)">${esc(c.platform)}: ${esc(c.note)}</div>`:c.note?`<div style="font-size:11px;color:var(--text3)">${esc(c.note)}</div>`:''}
+        </div>
+        <button onclick="openContactForm('${c.id}')" class="ia"><i class="ti ti-edit"></i></button>
+        <button onclick="if(confirm('確定刪除？')){D.contacts=D.contacts.filter(x=>x.id!=='${c.id}');save();renderContacts();}" class="ia"><i class="ti ti-trash"></i></button>
+      </div>`).join(''):`<div class="empty" style="padding:32px 24px"><i class="ti ti-users"></i><p>還沒有常用名單<br>點右上角 + 新增</p></div>`}
+    </div>
+    <div style="height:16px"></div>`;
+}
+
+// HELPERS
+function getYearM(t,dateStr){return(t.members||[]).filter(m=>{if(m.role!=='year')return false;if(m.rangeType==='full')return true;const d=new Date(dateStr),f=m.from?new Date(m.from):null,to=m.to?new Date(m.to):null;return(!f||d>=f)&&(!to||d<=to);});}
+function getSeasM(t,sess){const res=[];const seen=new Set();for(const s of(t.seasons||[])){for(const m of(s.members||[])){if(seen.has(m.id))continue;let act=false;if(m.rangeType==='full'){act=!!(s.sessions&&s.sessions.find(x=>x.id===sess.id));}else{const f=m.from?new Date(m.from):null,to=m.to?new Date(m.to):null,d=new Date(sess.date);act=(!f||d>=f)&&(!to||d<=to);}if(act){seen.add(m.id);res.push(m);}}}return res;}
+function cntMSess(t,m){if(m.rangeType==='full'){let n=0;for(const s of(t.seasons||[]))n+=(s.sessions||[]).length;return n;}const f=m.from?new Date(m.from):null,to=m.to?new Date(m.to):null;let n=0;for(const s of(t.seasons||[])){for(const ss of(s.sessions||[])){const d=new Date(ss.date);if((!f||d>=f)&&(!to||d<=to))n++;}}return n;}
+function cntSMSess(t,season,m){if(m.rangeType==='full')return(season.sessions||[]).length;const f=m.from?new Date(m.from):null,to=m.to?new Date(m.to):null;let n=0;for(const s of(t.seasons||[])){for(const ss of(s.sessions||[])){const d=new Date(ss.date);if((!f||d>=f)&&(!to||d<=to))n++;}}return n;}
+function calcStats(t){
+  let col=0,exp=0,yi=0,si=0,ci=0,shouldCollect=0;
+  const now=new Date();now.setHours(23,59,59,999);
+  for(const e of(t.expenses||[]))exp+=Number(e.amount);
+  for(const s of(t.seasons||[])){
+    for(const sess of(s.sessions||[])){
+      const ym=getYearM(t,sess.date);const sm=getSeasM(t,sess);const abs=sess.absent||[];
+      const isPast=new Date(sess.date)<=now;
+      ym.forEach(m=>{
+        const fee=Number(m.fee);yi+=fee;
+        if(!abs.includes(m.id)){
+          if(isPast)shouldCollect+=fee;
+          if((sess.checkedYear||[]).includes(m.id))col+=fee;
+        }
+      });
+      sm.forEach(m=>{
+        const fee=Number(m.fee);si+=fee;
+        if(!abs.includes(m.id)){
+          if(isPast)shouldCollect+=fee;
+          if((sess.checkedSeason||[]).includes(m.id))col+=fee;
+        }
+      });
+      (sess.casual||[]).forEach(c=>{
+        ci+=Number(c.fee);
+        if(isPast)shouldCollect+=Number(c.fee);
+        if(c.paid)col+=Number(c.fee);
+      });
+    }
+  }
+  return{collected:col,expenses:exp,balance:col-exp,yearIncome:yi,seasonIncome:si,casualIncome:ci,shouldCollect};
+}
+
+function getSess(){const t=D.teams.find(x=>x.id===curTeamId);if(!t)return null;for(const s of(t.seasons||[])){const f=s.sessions.find(x=>x.id===curSessId);if(f)return f;}return null;}
+function toggleYC(mid){const s=getSess();if(!s)return;if(!s.checkedYear)s.checkedYear=[];const i=s.checkedYear.indexOf(mid);if(i>=0)s.checkedYear.splice(i,1);else s.checkedYear.push(mid);save();renderSessionPage(curTeamId,curSessId);}
+function toggleSC(mid){const s=getSess();if(!s)return;if(!s.checkedSeason)s.checkedSeason=[];const i=s.checkedSeason.indexOf(mid);if(i>=0)s.checkedSeason.splice(i,1);else s.checkedSeason.push(mid);save();renderSessionPage(curTeamId,curSessId);}
+function setAbs(mid,abs,isSeason){const s=getSess();if(!s)return;if(!s.absent)s.absent=[];if(abs){if(!s.absent.includes(mid))s.absent.push(mid);if(isSeason)s.checkedSeason=(s.checkedSeason||[]).filter(x=>x!==mid);else s.checkedYear=(s.checkedYear||[]).filter(x=>x!==mid);}else{s.absent=s.absent.filter(x=>x!==mid);}save();renderSessionPage(curTeamId,curSessId);}
+function toggleCP(i){const s=getSess();if(!s||!s.casual[i])return;s.casual[i].paid=!s.casual[i].paid;save();renderSessionPage(curTeamId,curSessId);}
+function delCasual(i){const s=getSess();if(!s)return;s.casual.splice(i,1);save();renderSessionPage(curTeamId,curSessId);}
+
+function toggleMPaid(mid,seasonId){
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  let m=null;
+  if(seasonId){const s=(t.seasons||[]).find(x=>x.id===seasonId);if(s)m=(s.members||[]).find(x=>x.id===mid);}
+  else{m=(t.members||[]).find(x=>x.id===mid);}
+  if(!m)return;m.paid=!m.paid;
+  if(m.paid){
+    // For season members: use getSeasM which already handles cross-season date ranges
+    // For year members: use getYearM
+    for(const s of(t.seasons||[])){
+      for(const sess of(s.sessions||[])){
+        let active=false;
+        if(seasonId){
+          // check if this member is active on this session date (handles cross-season)
+          active=!!(getSeasM(t,sess).find(x=>x.id===mid));
+        }else{
+          active=!!(getYearM(t,sess.date).find(x=>x.id===mid));
+        }
+        if(active){
+          const key=seasonId?'checkedSeason':'checkedYear';
+          if(!sess[key])sess[key]=[];
+          if(!sess[key].includes(mid))sess[key].push(mid);
+        }
+      }
+    }
+  }
+  save();setTab('members');
+}
+
+// TEAM FORM
+function setupDayBtns(){} // no-op, using onclick
+function openTeamForm(teamId){
+  _editTeamId=teamId;
+  const t=teamId?D.teams.find(x=>x.id===teamId):null;
+  document.getElementById('ft-name').value=t?t.name:'';
+  document.getElementById('ft-type').value=t?t.type:'year';
+  document.getElementById('ft-start').value=t?t.startTime:'19:00';
+  document.getElementById('ft-end').value=t?t.endTime:'21:00';
+  document.getElementById('ft-loc').value=t?t.location:'';
+  document.querySelectorAll('.day-btn').forEach(b=>{b.classList.toggle('sel',t&&(t.days||[]).includes(Number(b.dataset.d)));});
+  document.getElementById('sh-team-title').textContent=t?'編輯球團':'新增球團';
+  openOv('ov-team');setupDayBtns();
+}
+function saveTeam(){
+  const name=document.getElementById('ft-name').value.trim();if(!name)return alert('請輸入球團名稱');
+  const days=[...document.querySelectorAll('.day-btn.sel')].map(b=>Number(b.dataset.d));
+  const data={name,type:document.getElementById('ft-type').value,days,startTime:document.getElementById('ft-start').value,endTime:document.getElementById('ft-end').value,location:document.getElementById('ft-loc').value.trim()};
+  if(_editTeamId){const t=D.teams.find(x=>x.id===_editTeamId);if(t)Object.assign(t,data);}
+  else{D.teams.push({id:uid(),...data,members:[],seasons:[],expenses:[],createdAt:Date.now()});}
+  save();closeOv('ov-team');renderHome();
+}
+
+// SEASON FORM
+function openSeasonForm(sid){
+  _editSeasonId=sid;
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  const s=sid?(t.seasons||[]).find(x=>x.id===sid):null;
+  const isCasual=t.type==='casual';
+  document.getElementById('fse-name').value=s?s.name:(isCasual?'場次':'');
+  document.getElementById('fse-start').value=s?s.startDate:'';
+  // Show/hide end date for casual teams
+  const endRow=document.getElementById('fse-end-row');
+  if(endRow)endRow.style.display=isCasual?'none':'block';
+  document.getElementById('fse-end').value=isCasual?(s?s.startDate:''):( s?s.endDate:'');
+  const courts=s&&s.sessions&&s.sessions[0]?s.sessions[0].courts:2;
+  const pax=s&&s.sessions&&s.sessions[0]?s.sessions[0].perCourt:7;
+  document.getElementById('fse-courts').value=courts;document.getElementById('fse-pax').value=pax;
+  document.getElementById('fse-hint').textContent=`總上限：${courts*pax}人（${pax} × ${courts}）`;
+  const prev=document.getElementById('fse-preview');prev.style.display='none';
+  document.getElementById('sh-season-title').textContent=isCasual?(s?'編輯場次':'新增場次'):(s?'編輯季別':'新增季別');
+  document.getElementById('fse-save-btn').textContent=isCasual?'新增場次':(s?'儲存':'產生場次');
+  openOv('ov-season');
+}
+function previewSess(){
+  const c=Number(document.getElementById('fse-courts').value)||2;const p=Number(document.getElementById('fse-pax').value)||7;
+  document.getElementById('fse-hint').textContent=`總上限：${c*p}人（${p} × ${c}）`;
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  if(t.type==='casual'||_editSeasonId)return;
+  const s=document.getElementById('fse-start').value,e=document.getElementById('fse-end').value;
+  if(!s||!e)return;
+  const dates=genDates(t.days||[],s,e);
+  const prev=document.getElementById('fse-preview');prev.style.display='block';prev.textContent=`預計產生 ${dates.length} 場`;
+}
+function genDates(days,s,e){if(!days.length)return[];const start=new Date(s),end=new Date(e),dates=[];let cur=new Date(start);while(cur<=end){if(days.includes(cur.getDay()))dates.push(cur.toISOString().slice(0,10));cur.setDate(cur.getDate()+1);}return dates;}
+function saveSeason(){
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  const isCasual=t.type==='casual';
+  const name=document.getElementById('fse-name').value.trim()||(isCasual?'場次':'季別');
+  const start=document.getElementById('fse-start').value;
+  const end=isCasual?start:document.getElementById('fse-end').value;
+  const courts=Number(document.getElementById('fse-courts').value)||2;const pax=Number(document.getElementById('fse-pax').value)||7;
+  if(_editSeasonId){
+    const s=(t.seasons||[]).find(x=>x.id===_editSeasonId);if(!s)return;
+    s.name=name;s.startDate=start;s.endDate=end;
+    (s.sessions||[]).forEach(ss=>{ss.courts=courts;ss.perCourt=pax;});
+    save();closeOv('ov-season');setTab('sessions');return;
+  }
+  if(!start)return alert('請填入日期');
+  if(!t.seasons)t.seasons=[];
+  if(isCasual){
+    // Casual: one session per date added
+    t.seasons.push({id:uid(),name,startDate:start,endDate:start,_open:true,members:[],
+      sessions:[{id:uid(),date:start,courts,perCourt:pax,absent:[],checkedYear:[],checkedSeason:[],casual:[]}]});
+  } else {
+    if(!end)return alert('請填入結束日期');
+    const dates=genDates(t.days||[],start,end);if(!dates.length)return alert('該區間沒有符合的打球日');
+    t.seasons.push({id:uid(),name,startDate:start,endDate:end,_open:true,members:[],
+      sessions:dates.map(date=>({id:uid(),date,courts,perCourt:pax,absent:[],checkedYear:[],checkedSeason:[],casual:[]}))});
+  }
+  save();closeOv('ov-season');setTab('sessions');
+}
+
+// ADD EXTRA SESSION
+let _adjustSessId=null;
+function openAdjustCourts(sessId){
+  _adjustSessId=sessId;
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  let sess=null;for(const s of(t.seasons||[])){const f=s.sessions.find(x=>x.id===sessId);if(f){sess=f;break;}}
+  if(!sess)return;
+  const courts=sess.courts||2;const pax=sess.perCourt||7;
+  document.getElementById('fas-courts').value=courts;
+  document.getElementById('fas-pax').value=pax;
+  document.getElementById('fas-curr-info').innerHTML=`目前：<strong>${courts}</strong> 場地 × <strong>${pax}</strong> 人 = 上限 <strong>${courts*pax}</strong> 人`;
+  updateFasHint();
+  openOv('ov-add-sess');
+}
+function stepCourts(d){const el=document.getElementById('fas-courts');el.value=Math.max(1,Math.min(10,(Number(el.value)||2)+d));updateFasHint();}
+function stepPax(d){const el=document.getElementById('fas-pax');el.value=Math.max(1,Math.min(30,(Number(el.value)||7)+d));updateFasHint();}
+function updateFasHint(){
+  const c=Number(document.getElementById('fas-courts').value)||2;
+  const p=Number(document.getElementById('fas-pax').value)||7;
+  document.getElementById('fas-hint').textContent=`總上限：${c*p}人（${p}人 × ${c}場地）`;
+}
+function saveAddSess(){
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  let sess=null;for(const s of(t.seasons||[])){const f=s.sessions.find(x=>x.id===_adjustSessId);if(f){sess=f;break;}}
+  if(!sess)return;
+  const courts=Number(document.getElementById('fas-courts').value)||2;
+  const pax=Number(document.getElementById('fas-pax').value)||7;
+  sess.courts=courts;sess.perCourt=pax;
+  save();closeOv('ov-add-sess');setTab('sessions');
+}
+
+// MEMBER FORM
+function setRange(type){_memberRangeType=type;document.getElementById('rm-full').classList.toggle('sel',type==='full');document.getElementById('rm-custom').classList.toggle('sel',type==='custom');document.getElementById('rd-full').classList.toggle('sel',type==='full');document.getElementById('rd-custom').classList.toggle('sel',type==='custom');document.getElementById('fm-range').style.display=type==='custom'?'block':'none';}
+function onRoleChange(){const r=document.getElementById('fm-role').value;document.getElementById('rm-full-lbl').textContent=r==='year'?'完整年繳':'完整季繳';document.getElementById('rm-full-sub').textContent=r==='year'?'所有場次都算入':'此季所有場次都算入';}
+function openMemberForm(role,seasonId,editId){
+  _memberSeasonId=seasonId||null;_editMemberId=editId||null;_memberRangeType='full';
+  _lastMemberGroup=seasonId||'year';
+  const t=D.teams.find(x=>x.id===curTeamId);
+  let m=null;
+  if(editId){if(seasonId){const s=(t.seasons||[]).find(x=>x.id===seasonId);if(s)m=(s.members||[]).find(x=>x.id===editId);}else{m=(t.members||[]).find(x=>x.id===editId);}}
+  document.getElementById('fm-name').value=m?m.name:'';
+  // For season teams: only show season role; for year teams: show both
+  const roleEl=document.getElementById('fm-role');
+  if(t.type==='season'||seasonId){
+    roleEl.innerHTML='<option value="season">季繳</option>';
+    roleEl.value='season';
+  } else {
+    roleEl.innerHTML='<option value="year">年繳</option><option value="season">季繳</option>';
+    roleEl.value=m?m.role:(role||'year');
+  }
+  document.getElementById('fm-fee').value=m?m.fee:(role==='season'?280:230);
+  document.getElementById('fm-from').value=m?m.from||'':'';document.getElementById('fm-to').value=m?m.to||'':'';
+  document.getElementById('fm-note').value=m?m.note||'':'';
+  document.getElementById('fm-role').disabled=!!(seasonId||editId);
+  _memberRangeType=m?m.rangeType||'full':'full';
+  setRange(_memberRangeType);onRoleChange();
+  // contact list
+  const cl=document.getElementById('fm-contact-list');
+  const contacts=D.contacts||[];
+  cl.innerHTML=contacts.length?contacts.map(c=>`<div class="csl-row" onclick="document.getElementById('fm-name').value='${esc(c.name)}'"><div class="csl-name">${esc(c.name)}</div><div class="csl-sub">${c.phone?esc(c.phone):''}</div></div>`).join(''):'<div style="padding:10px 12px;font-size:13px;color:var(--text3)">常用名單為空</div>';
+  document.getElementById('sh-member-title').textContent=editId?'編輯成員':'新增成員';
+  openOv('ov-member');
+}
+function saveMember(){
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  const name=document.getElementById('fm-name').value.trim();if(!name)return alert('請輸入姓名');
+  const data={name,fee:Number(document.getElementById('fm-fee').value)||0,role:document.getElementById('fm-role').value,rangeType:_memberRangeType,from:_memberRangeType==='custom'?document.getElementById('fm-from').value:'',to:_memberRangeType==='custom'?document.getElementById('fm-to').value:'',note:document.getElementById('fm-note').value.trim()};
+  if(_memberSeasonId){const s=(t.seasons||[]).find(x=>x.id===_memberSeasonId);if(!s)return;if(!s.members)s.members=[];if(_editMemberId){Object.assign(s.members.find(x=>x.id===_editMemberId)||{},data);}else{s.members.push({id:uid(),paid:false,...data});}}
+  else{if(!t.members)t.members=[];if(_editMemberId){Object.assign(t.members.find(x=>x.id===_editMemberId)||{},data);}else{t.members.push({id:uid(),paid:false,...data});}}
+  save();closeOv('ov-member');setTab('members');
+}
+
+// EXPENSE FORM
+function openExpForm(expId){
+  _editExpId=expId||null;
+  const t=D.teams.find(x=>x.id===curTeamId);
+  const e=expId?(t.expenses||[]).find(x=>x.id===expId):null;
+  document.getElementById('fe-cat').value=e?e.cat:'場地費';document.getElementById('fe-name').value=e?e.name:'';document.getElementById('fe-amt').value=e?e.amount:'';document.getElementById('fe-status').value=e?e.status:'paid';
+  document.getElementById('sh-exp-title').textContent=expId?'編輯費用':'新增費用';
+  openOv('ov-expense');
+}
+function saveExpense(){
+  const t=D.teams.find(x=>x.id===curTeamId);if(!t)return;
+  const amt=Number(document.getElementById('fe-amt').value);if(!amt)return alert('請輸入金額');
+  if(!t.expenses)t.expenses=[];
+  const data={cat:document.getElementById('fe-cat').value,name:document.getElementById('fe-name').value.trim()||document.getElementById('fe-cat').value,amount:amt,status:document.getElementById('fe-status').value};
+  if(_editExpId){Object.assign(t.expenses.find(x=>x.id===_editExpId)||{},data);}else{t.expenses.push({id:uid(),...data});}
+  save();closeOv('ov-expense');setTab('expenses');
+}
+
+// CASUAL FORM
+function openCasualForm(){
+  document.getElementById('fc-name').value='';document.getElementById('fc-fee').value='300';document.getElementById('fc-note').value='';
+  const cl=document.getElementById('fc-contact-list');const contacts=D.contacts||[];
+  cl.innerHTML=contacts.length?contacts.map(c=>`<div class="csl-row" onclick="document.getElementById('fc-name').value='${esc(c.name)}'"><div class="csl-name">${esc(c.name)}</div><div class="csl-sub">${c.phone?esc(c.phone):''}</div></div>`).join(''):'<div style="padding:10px 12px;font-size:13px;color:var(--text3)">常用名單為空</div>';
+  openOv('ov-casual');
+}
+function saveCasual(){
+  const sess=getSess();if(!sess)return;
+  const t=D.teams.find(x=>x.id===curTeamId);
+  const ym=getYearM(t,sess.date);const sm=getSeasM(t,sess);
+  const cap=(sess.perCourt||7)*(sess.courts||2);
+  const abs=sess.absent||[];const cas=sess.casual||[];
+  const confirmed=ym.length+sm.length-abs.length;const total=confirmed+cas.length;
+  if(total>=cap){if(!confirm(`目前已有 ${total} 人，超過上限 ${cap} 人。確定要新增臨打嗎？`))return;}
+  if(!sess.casual)sess.casual=[];
+  sess.casual.push({id:uid(),name:document.getElementById('fc-name').value.trim(),fee:Number(document.getElementById('fc-fee').value)||300,note:document.getElementById('fc-note').value.trim(),paid:false});
+  save();closeOv('ov-casual');renderSessionPage(curTeamId,curSessId);
+}
+
+// CONTACT FORM
+function openContactForm(id){
+  _editContactId=id||null;
+  const c=id?(D.contacts||[]).find(x=>x.id===id):null;
+  document.getElementById('fco-name').value=c?c.name:'';document.getElementById('fco-phone').value=c?c.phone||'':'';document.getElementById('fco-platform').value=c?c.platform||'':'';document.getElementById('fco-note').value=c?c.note||'':'';
+  document.getElementById('sh-contact-title').textContent=id?'編輯名單':'新增常用名單';
+  openOv('ov-contact');
+}
+function saveContact(){
+  if(!D.contacts)D.contacts=[];
+  const name=document.getElementById('fco-name').value.trim();if(!name)return alert('請輸入姓名');
+  const data={name,phone:document.getElementById('fco-phone').value.trim(),platform:document.getElementById('fco-platform').value,note:document.getElementById('fco-note').value.trim()};
+  if(_editContactId){Object.assign(D.contacts.find(x=>x.id===_editContactId)||{},data);}else{D.contacts.push({id:uid(),...data});}
+  save();closeOv('ov-contact');renderContacts();
+}
+
+// OVERLAY
+function openOv(id){document.getElementById(id).classList.add('open');}
+function closeOv(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+
+// ── Search/filter functions ──
+function filterMemberContacts(){
+  const q=(document.getElementById('fm-contact-search')||{}).value||'';
+  const contacts=(D.contacts||[]).filter(c=>!q||c.name.includes(q)||(c.phone||'').includes(q));
+  const cl=document.getElementById('fm-contact-list');if(!cl)return;
+  cl.innerHTML=contacts.length?contacts.map(c=>`<div class="csl-row" onclick="document.getElementById('fm-name').value='${esc(c.name)}'"><div class="csl-name">${esc(c.name)}</div><div class="csl-sub">${c.phone?esc(c.phone):''}</div></div>`).join(''):'<div style="padding:10px 12px;font-size:13px;color:var(--text3)">找不到</div>';
+}
+function filterCasualContacts(){
+  const q=(document.getElementById('fc-contact-search')||{}).value||'';
+  const contacts=(D.contacts||[]).filter(c=>!q||c.name.includes(q)||(c.phone||'').includes(q));
+  const cl=document.getElementById('fc-contact-list');if(!cl)return;
+  cl.innerHTML=contacts.length?contacts.map(c=>`<div class="csl-row" onclick="document.getElementById('fc-name').value='${esc(c.name)}'"><div class="csl-name">${esc(c.name)}</div><div class="csl-sub">${c.phone?esc(c.phone):''}</div></div>`).join(''):'<div style="padding:10px 12px;font-size:13px;color:var(--text3)">找不到</div>';
+}
+function filterContacts(){
+  const q=(document.getElementById('contacts-search')||{}).value.toLowerCase()||'';
+  const contacts=(D.contacts||[]).filter(c=>!q||c.name.toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.note||'').toLowerCase().includes(q));
+  const el=document.getElementById('contacts-list');if(!el)return;
+  el.innerHTML=contacts.length?contacts.map(c=>`
+    <div class="contact-row">
+      <div class="avatar av-g" style="flex-shrink:0">${esc(c.name.slice(0,1))}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500;color:var(--text)">${esc(c.name)}</div>
+        ${c.phone?`<div style="font-size:11px;color:var(--text3)">${esc(c.phone)}</div>`:''}
+        ${(c.platform&&c.note)?`<div style="font-size:11px;color:var(--text3)">${esc(c.platform)}: ${esc(c.note)}</div>`:c.note?`<div style="font-size:11px;color:var(--text3)">${esc(c.note)}</div>`:''}
+      </div>
+      <button onclick="openContactForm('${c.id}')" class="ia"><i class="ti ti-edit"></i></button>
+      <button onclick="if(confirm('確定刪除？')){D.contacts=D.contacts.filter(x=>x.id!=='${c.id}');save();renderContacts();}" class="ia"><i class="ti ti-trash"></i></button>
+    </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:16px">找不到符合的名單</div>';
+}
+
+
+// ── CALENDAR ──────────────────────────────────────────
+let calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),calYearRangeStart=2020;
+const TEAM_COLORS_CAL=['#8AAB93','#A1C2CB','#CBAF79','#DF978A','#C9CADE','#AFB99E','#5190A2','#DBC9C4'];
+const CAL_MONTHS=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+const CAL_MONTHS_S=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function getTeamColor(teamId){
+  const idx=D.teams.filter(t=>!t.archived).findIndex(t=>t.id===teamId);
+  return TEAM_COLORS_CAL[Math.max(0,idx)%TEAM_COLORS_CAL.length];
+}
+
+function getSessionsOnDate(dateStr){
+  const results=[];
+  for(const t of D.teams.filter(x=>!x.archived)){
+    for(const s of(t.seasons||[])){
+      const sess=s.sessions.find(x=>x.date===dateStr);
+      if(sess)results.push({team:t,sess,color:getTeamColor(t.id)});
+    }
+  }
+  // sort by team name
+  results.sort((a,b)=>a.team.name.localeCompare(b.team.name));
+  return results;
+}
+
+function renderCalendar(){
+  const nc=notifCount();
+  const now=new Date();
+  const todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const prevDays=new Date(calYear,calMonth,0).getDate();
+
+  // Build day headers
+  let dows='';
+  ['日','一','二','三','四','五','六'].forEach((d,i)=>{dows+=`<div class="cal-dow${i===0?' sun':''}">${d}</div>`;});
+
+  // Build cells
+  let cells='';
+  const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
+  for(let i=0;i<totalCells;i++){
+    let day,month,year,isOther=false,dateStr;
+    if(i<firstDay){day=prevDays-firstDay+i+1;month=calMonth===0?11:calMonth-1;year=calMonth===0?calYear-1:calYear;isOther=true;}
+    else if(i>=firstDay+daysInMonth){day=i-firstDay-daysInMonth+1;month=calMonth===11?0:calMonth+1;year=calMonth===11?calYear+1:calYear;isOther=true;}
+    else{day=i-firstDay+1;month=calMonth;year=calYear;}
+    dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr;
+    const dow=new Date(year,month,day).getDay();
+    const sessions=getSessionsOnDate(dateStr);
+    const evHtml=sessions.slice(0,3).map(({team,color})=>{
+      const bg=color+'28';const tc=color;
+      return`<div class="cal-ev" style="background:${bg};color:${tc}"><div class="cal-ev-dot" style="background:${tc}"></div>${esc(team.name)}</div>`;
+    }).join('')+(sessions.length>3?`<div style="font-size:9px;color:var(--text3);padding:0 3px">+${sessions.length-3}</div>`:'');
+    cells+=`<div class="cal-cell${isOther?' other-month':''}${isToday?' today':''}" onclick="onCalDayClick('${dateStr}')">
+      <div class="cal-num${dow===0&&!isToday?' sun':''}">
+        ${isToday?`<span class="cal-num" style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center">${day}</span>`:day}
+      </div>
+      <div class="cal-events">${evHtml}</div>
+    </div>`;
+  }
+
+  document.getElementById('page-calendar').innerHTML=`
+    <div class="cal-topbar">
+      <button class="cal-nav-btn" onclick="calToday()" style="font-size:12px;font-weight:700;padding:4px 10px;border:1px solid var(--border2);border-radius:20px;color:var(--green)">今天</button>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="calPrev()"><i class="ti ti-arrow-left"></i></button>
+        <button class="cal-year-btn" onclick="openCalYearPicker()">${calYear}</button>
+        <span class="cal-sep">/</span>
+        <button class="cal-month-btn" onclick="openCalMonthPicker()">${String(calMonth+1).padStart(2,'0')}</button>
+        <button class="cal-nav-btn" onclick="calNext()"><i class="ti ti-arrow-right"></i></button>
+      </div>
+      <button class="topbar-acct-btn" onclick="openAcctPanel()" aria-label="帳號"><i class="ti ti-user-circle"></i><span class="tb-notif-dot" style="display:${nc>0?'flex':'none'}">${nc}</span></button>
+    </div>
+    <div class="cal-grid">${dows}${cells}</div>
+    <div style="height:90px"></div>`;
+}
+
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+function calToday(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();renderCalendar();}
+
+function onCalDayClick(dateStr){
+  const sessions=getSessionsOnDate(dateStr);
+  if(!sessions.length)return;
+  if(sessions.length===1){route('session',sessions[0].team.id,sessions[0].sess.id);showPage('home');}
+  else{
+    // show a mini sheet listing sessions that day
+    const sheet=document.createElement('div');
+    sheet.style.cssText='position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:20px 20px 0 0;z-index:300;padding:16px';
+    sheet.innerHTML=`<div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 12px"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">${dateStr} 的場次</div>
+      ${sessions.map(({team,color})=>`<div onclick="this.closest('div[style]').remove();document.getElementById('overlay-daysheet').remove();route('session','${team.id}','${team.seasons.flatMap(s=>s.sessions).find(x=>x.date==='${dateStr}')?.id}');showPage('home')" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
+        <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <div style="font-size:14px;font-weight:500;color:var(--text)">${esc(team.name)}</div>
+      </div>`).join('')}
+      <button onclick="this.closest('div[style]').remove();document.getElementById('overlay-daysheet').remove()" style="width:100%;padding:10px;margin-top:10px;background:none;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif">取消</button>`;
+    const ov=document.createElement('div');ov.id='overlay-daysheet';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299';
+    ov.onclick=()=>{ov.remove();sheet.remove();};
+    document.body.appendChild(ov);document.body.appendChild(sheet);
+  }
+}
+
+function openCalYearPicker(){
+  calYearRangeStart=calYear-6;renderCalYearGrid();
+  document.getElementById('cal-year-overlay').classList.add('open');
+}
+function shiftCalYearRange(n){calYearRangeStart+=n;renderCalYearGrid();}
+function renderCalYearGrid(){
+  document.getElementById('cal-year-range').textContent=`${calYearRangeStart} – ${calYearRangeStart+11}`;
+  const g=document.getElementById('cal-year-grid');g.innerHTML='';
+  for(let y=calYearRangeStart;y<calYearRangeStart+12;y++){
+    const c=document.createElement('div');c.className='cal-picker-cell'+(y===calYear?' active':'');
+    c.textContent=y;c.onclick=()=>{calYear=y;document.getElementById('cal-year-overlay').classList.remove('open');renderCalendar();};
+    g.appendChild(c);
+  }
+}
+function openCalMonthPicker(){
+  const g=document.getElementById('cal-month-grid');g.innerHTML='';
+  CAL_MONTHS_S.forEach((m,i)=>{
+    const c=document.createElement('div');c.className='cal-picker-cell'+(i===calMonth?' active':'');
+    c.textContent=m;c.onclick=()=>{calMonth=i;document.getElementById('cal-month-overlay').classList.remove('open');renderCalendar();};
+    g.appendChild(c);
+  });
+  document.getElementById('cal-month-overlay').classList.add('open');
+}
+
+load();
+if(D.currentUser&&D.users[D.currentUser]){showMain();}
+</script>
+</body>
+</html>
