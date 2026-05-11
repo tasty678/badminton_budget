@@ -810,29 +810,39 @@ function save(){
 }
 
 async function _saveToFirestore(){
-  if(!window._fbDb||!D._uid)return;
+  if(!window._fbDb||!D._uid){
+    console.warn('Firestore not ready - db:',!!window._fbDb,'uid:',D._uid);
+    return;
+  }
   const db=window._fbDb;const uid=D._uid;const email=D.currentUser;
+  console.log('Saving to Firestore - teams:',D.teams.length,'uid:',uid);
   try{
-    // Save teams
-    const teamPromises=D.teams.map(t=>{
+    // Save teams one by one for clearer error tracking
+    for(const t of D.teams){
       const {id,...data}=t;
       if(!data.ownerId)data.ownerId=uid;
       if(!data.editors)data.editors=[];
       if(!data.viewers)data.viewers=[];
-      return window._fbSetDoc(window._fbDoc(db,'teams',id),data);
-    });
+      // Clean up undefined values (Firestore doesn't accept them)
+      const clean=JSON.parse(JSON.stringify(data));
+      await window._fbSetDoc(window._fbDoc(db,'teams',id),clean);
+      console.log('Saved team:',id);
+    }
     // Save user profile
-    const userPromise=D.users[email]?
-      window._fbSetDoc(window._fbDoc(db,'users',uid),D.users[email]):
-      Promise.resolve();
+    if(D.users[email]){
+      const cleanUser=JSON.parse(JSON.stringify(D.users[email]));
+      await window._fbSetDoc(window._fbDoc(db,'users',uid),cleanUser);
+    }
     // Save contacts
-    const contactPromises=D.contacts.map(c=>{
+    for(const c of D.contacts){
       const {id,...data}=c;
-      return window._fbSetDoc(window._fbDoc(db,'contacts',uid,'list',id),data);
-    });
-    // Run all in parallel for speed
-    await Promise.all([...teamPromises, userPromise, ...contactPromises]);
-  }catch(e){console.error('Firestore save error:',e);}
+      const clean=JSON.parse(JSON.stringify(data));
+      await window._fbSetDoc(window._fbDoc(db,'contacts',uid,'list',id),clean);
+    }
+    console.log('Firestore save complete');
+  }catch(e){
+    console.error('Firestore save error:',e.code,e.message);
+  }
 }
 
 async function deleteTeamFromFirestore(teamId){
