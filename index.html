@@ -354,9 +354,8 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     window._fbSignIn = () => {
       if(isMobile){
-        // Show redirecting state
         const btn = document.querySelector('#login-screen button');
-        if(btn) btn.textContent = '跳轉中...';
+        if(btn){ btn.innerHTML = '跳轉中...'; btn.disabled = true; }
         return signInWithRedirect(auth, provider);
       } else {
         return signInWithPopup(auth, provider);
@@ -365,67 +364,57 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 
     window._fbSignOut = () => signOut(auth);
 
-    let _currentUid = null; // track current user to avoid duplicate loads
+    let _appReady = false;
 
     async function handleSignedIn(user) {
-      // Avoid re-running if same user already loaded
-      if (_currentUid === user.uid) return;
-      _currentUid = user.uid;
+      if(_appReady) return; // already showing main screen
       window._fbUser = user;
       D.currentUser = user.email;
       D._uid = user.uid;
-      // Show loading on login screen
-      const loginScr = document.getElementById('login-screen');
-      if(loginScr && loginScr.style.display !== 'none') {
-        let loading = document.getElementById('login-loading');
-        if(!loading){
-          loading = document.createElement('div');
-          loading.id = 'login-loading';
-          loading.style.cssText = 'margin-top:16px;font-size:13px;color:#8B9E8A;text-align:center';
-          loading.textContent = '載入資料中...';
-          loginScr.appendChild(loading);
-        }
-      }
       try {
         await window._loadFromFirestore();
       } catch(e) {
         console.error('Load error:', e);
       }
+      _appReady = true;
       document.getElementById('login-screen').style.display = 'none';
       showMain();
     }
 
     function handleSignedOut() {
-      _currentUid = null;
+      _appReady = false;
       window._fbUser = null;
       D.currentUser = null;
       D._uid = null;
       D.teams = [];
       D.contacts = [];
-      // Clear localStorage on logout so stale data doesn't show
       try { localStorage.removeItem('badminton_v3'); } catch(e) {}
-      document.getElementById('main-screen').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
+      const ms = document.getElementById('main-screen');
+      const ls = document.getElementById('login-screen');
+      if(ms) ms.style.display = 'none';
+      if(ls) ls.style.display = 'flex';
     }
 
-    // Handle redirect result (mobile returns here after Google login)
-    getRedirectResult(auth).then(result => {
-      if (result && result.user) {
-        handleSignedIn(result.user);
-      }
-    }).catch(e => {
-      const code = e.code || '';
-      if(code !== 'auth/no-current-user' && code !== 'auth/null-user' && code !== 'auth/credential-already-in-use'){
-        const err = document.getElementById('l-err');
-        if(err){ err.style.display='block'; err.textContent='登入失敗：'+(e.message||code); }
-      }
-    });
-
-    // Auth state observer - fires on login, logout, and page refresh
-    onAuthStateChanged(auth, (user) => {
+    // onAuthStateChanged is the single source of truth
+    // Works for: page refresh, popup login, redirect login return, logout
+    onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? user.email : 'null');
       if (user) {
-        handleSignedIn(user);
+        await handleSignedIn(user);
       } else {
+        // Check if we're returning from a redirect first
+        try {
+          const result = await getRedirectResult(auth);
+          if (result && result.user) {
+            await handleSignedIn(result.user);
+            return;
+          }
+        } catch(e) {
+          const code = e.code || '';
+          if(code !== 'auth/no-current-user' && code !== 'auth/null-user'){
+            console.error('Redirect error:', code, e.message);
+          }
+        }
         handleSignedOut();
       }
     });
