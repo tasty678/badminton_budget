@@ -319,7 +319,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 .pill-tab-ongoing.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab-archived.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab{padding:7px 18px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border2);background:none;color:var(--text2);font-family:'Noto Sans TC',sans-serif;transition:all .15s}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
-  <!-- Firebase compat SDK (better mobile/Safari support) -->
+  <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -341,53 +341,49 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
     window._fbDb = _db;
     window._fbSignOut = () => _auth.signOut();
 
-    // Always use redirect - works on all devices including PWA
     window._fbSignIn = () => {
       const btn = document.querySelector('#login-screen button');
-      if(btn){ btn.innerHTML='<span>跳轉登入中...</span>'; btn.disabled=true; }
-      return _auth.signInWithRedirect(_provider);
+      if(btn){ btn.innerHTML='跳轉登入中...'; btn.disabled=true; }
+      _auth.signInWithRedirect(_provider);
     };
 
-    let _appReady = false;
+    // Single flag to prevent double execution
+    let _loaded = false;
 
-    async function handleSignedIn(user) {
-      if(_appReady) return;
-      _appReady = true;
-      window._fbUser = user;
-      D.currentUser = user.email;
-      D._uid = user.uid;
-      try { await window._loadFromFirestore(); } catch(e) { console.error(e); }
-      document.getElementById('login-screen').style.display = 'none';
-      showMain();
-    }
+    // onAuthStateChanged is called once on page load with current auth state
+    // If user is logged in -> go to app
+    // If not -> show login screen and wait
+    _auth.onAuthStateChanged(async (user) => {
+      if(_loaded) return;
+      _loaded = true;
 
-    function handleSignedOut() {
-      _appReady = false;
-      window._fbUser = null;
-      D.currentUser = null;
-      D._uid = null;
-      D.teams = [];
-      D.contacts = [];
-      try { localStorage.removeItem('badminton_v3'); } catch(e) {}
-      document.getElementById('main-screen').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
-      // Re-enable login button
-      const btn = document.querySelector('#login-screen button');
-      if(btn){ btn.disabled=false; }
-    }
-
-    // Handle redirect result first (returning from Google login)
-    _auth.getRedirectResult().then(result => {
-      if(result && result.user) handleSignedIn(result.user);
-    }).catch(e => {
-      if(e.code !== 'auth/no-current-user') console.error('Redirect result error:', e.code);
+      if(user){
+        // User is logged in (from session or redirect return)
+        window._fbUser = user;
+        D.currentUser = user.email;
+        D._uid = user.uid;
+        try{ await window._loadFromFirestore(); }catch(e){ console.error('Load error:',e); }
+        document.getElementById('login-screen').style.display = 'none';
+        showMain();
+      } else {
+        // Not logged in - show login screen
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('main-screen').style.display = 'none';
+        // Re-enable button in case it was disabled
+        const btn = document.querySelector('#login-screen button');
+        if(btn){ btn.disabled=false; }
+      }
     });
 
-    // Auth state observer
-    _auth.onAuthStateChanged(user => {
-      if(user) handleSignedIn(user);
-      else handleSignedOut();
-    });
+    // For logout: need to reset _loaded so next login works
+    window._fbSignOut = async () => {
+      _loaded = false;
+      D.teams=[];D.contacts=[];D.users={};D.currentUser=null;D._uid=null;
+      try{localStorage.removeItem('badminton_v3');}catch(e){}
+      await _auth.signOut();
+      // onAuthStateChanged will fire again with null, but _loaded is now false
+      // so it will go into the else branch and show login screen
+    };
   </script>
 </head>
 <body>
@@ -810,15 +806,8 @@ function fmtDS(s){if(!s)return'';const d=new Date(s);return`${d.getMonth()+1}/${
 // doLogin replaced by Firebase Google Auth
 function doLogout(){
   closePanel('acct');
-  // Clear local data immediately
-  D.teams=[];D.contacts=[];D.users={};D.currentUser=null;D._uid=null;
-  try{localStorage.removeItem('badminton_v3');}catch(e){}
   if(window._fbSignOut){
-    window._fbSignOut().catch(()=>{});
-    // handleSignedOut will be called by onAuthStateChanged
-  } else {
-    document.getElementById('main-screen').style.display='none';
-    document.getElementById('login-screen').style.display='flex';
+    window._fbSignOut();
   }
 }
 
