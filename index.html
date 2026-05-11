@@ -771,6 +771,7 @@ async function _saveToFirestore(){
     for(const t of D.teams){
       const {id,...data}=t;
       if(!data.ownerId)data.ownerId=uid;
+      if(!data.ownerEmail)data.ownerEmail=email;
       if(!data.editors)data.editors=[];
       if(!data.viewers)data.viewers=[];
       batch.set(db.collection('teams').doc(id),JSON.parse(JSON.stringify(data)));
