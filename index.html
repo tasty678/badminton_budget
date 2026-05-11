@@ -319,64 +319,44 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 .pill-tab-ongoing.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab-archived.act{background:#8AAB93;color:#fff;border-color:#8AAB93}.pill-tab{padding:7px 18px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border2);background:none;color:var(--text2);font-family:'Noto Sans TC',sans-serif;transition:all .15s}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-    const firebaseConfig = {
+  <!-- Firebase compat SDK (better mobile/Safari support) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
       apiKey: "AIzaSyAkGvoBUH3nowpRR6oYp-NU0Ug3RQEYLoY",
       authDomain: "badminton-budget.firebaseapp.com",
       projectId: "badminton-budget",
       storageBucket: "badminton-budget.firebasestorage.app",
       messagingSenderId: "1096871725452",
       appId: "1:1096871725452:web:43bdaab9d6d5a6fdf76ea9"
-    };
+    });
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+    const _auth = firebase.auth();
+    const _db = firebase.firestore();
+    const _provider = new firebase.auth.GoogleAuthProvider();
+    _provider.setCustomParameters({prompt:'select_account'});
 
-    // Expose to global scope for onclick handlers
-    const db = getFirestore(app);
-    window._fbAuth = auth;
-    window._fbDb = db;
-    window._fbDoc = doc;
-    window._fbGetDoc = getDoc;
-    window._fbSetDoc = setDoc;
-    window._fbCollection = collection;
-    window._fbGetDocs = getDocs;
-    window._fbDeleteDoc = deleteDoc;
-    window._fbOnSnapshot = onSnapshot;
-    window._fbProvider = provider;
-    // Detect mobile - use redirect on mobile, popup on desktop
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    window._fbDb = _db;
+    window._fbSignOut = () => _auth.signOut();
+
+    // Always use redirect - works on all devices including PWA
     window._fbSignIn = () => {
-      if(isMobile){
-        const btn = document.querySelector('#login-screen button');
-        if(btn){ btn.innerHTML = '跳轉中...'; btn.disabled = true; }
-        return signInWithRedirect(auth, provider);
-      } else {
-        return signInWithPopup(auth, provider);
-      }
+      const btn = document.querySelector('#login-screen button');
+      if(btn){ btn.innerHTML='<span>跳轉登入中...</span>'; btn.disabled=true; }
+      return _auth.signInWithRedirect(_provider);
     };
-
-    window._fbSignOut = () => signOut(auth);
 
     let _appReady = false;
 
     async function handleSignedIn(user) {
-      if(_appReady) return; // already showing main screen
+      if(_appReady) return;
+      _appReady = true;
       window._fbUser = user;
       D.currentUser = user.email;
       D._uid = user.uid;
-      try {
-        await window._loadFromFirestore();
-      } catch(e) {
-        console.error('Load error:', e);
-      }
-      _appReady = true;
+      try { await window._loadFromFirestore(); } catch(e) { console.error(e); }
       document.getElementById('login-screen').style.display = 'none';
       showMain();
     }
@@ -389,34 +369,24 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
       D.teams = [];
       D.contacts = [];
       try { localStorage.removeItem('badminton_v3'); } catch(e) {}
-      const ms = document.getElementById('main-screen');
-      const ls = document.getElementById('login-screen');
-      if(ms) ms.style.display = 'none';
-      if(ls) ls.style.display = 'flex';
+      document.getElementById('main-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      // Re-enable login button
+      const btn = document.querySelector('#login-screen button');
+      if(btn){ btn.disabled=false; }
     }
 
-    // onAuthStateChanged is the single source of truth
-    // Works for: page refresh, popup login, redirect login return, logout
-    onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', user ? user.email : 'null');
-      if (user) {
-        await handleSignedIn(user);
-      } else {
-        // Check if we're returning from a redirect first
-        try {
-          const result = await getRedirectResult(auth);
-          if (result && result.user) {
-            await handleSignedIn(result.user);
-            return;
-          }
-        } catch(e) {
-          const code = e.code || '';
-          if(code !== 'auth/no-current-user' && code !== 'auth/null-user'){
-            console.error('Redirect error:', code, e.message);
-          }
-        }
-        handleSignedOut();
-      }
+    // Handle redirect result first (returning from Google login)
+    _auth.getRedirectResult().then(result => {
+      if(result && result.user) handleSignedIn(result.user);
+    }).catch(e => {
+      if(e.code !== 'auth/no-current-user') console.error('Redirect result error:', e.code);
+    });
+
+    // Auth state observer
+    _auth.onAuthStateChanged(user => {
+      if(user) handleSignedIn(user);
+      else handleSignedOut();
     });
   </script>
 </head>
@@ -802,17 +772,19 @@ async function _saveToFirestore(){
   if(!window._fbDb||!D._uid)return;
   const db=window._fbDb;const uid=D._uid;const email=D.currentUser;
   try{
+    const batch=db.batch();
     for(const t of D.teams){
       const {id,...data}=t;
       if(!data.ownerId)data.ownerId=uid;
       if(!data.editors)data.editors=[];
       if(!data.viewers)data.viewers=[];
-      const clean=JSON.parse(JSON.stringify(data));
-      await db.collection('teams').doc(id).set(clean);
+      batch.set(db.collection('teams').doc(id),JSON.parse(JSON.stringify(data)));
     }
     if(D.users[email]){
-      await db.collection('users').doc(uid).set(JSON.parse(JSON.stringify(D.users[email])));
+      batch.set(db.collection('users').doc(uid),JSON.parse(JSON.stringify(D.users[email])));
     }
+    await batch.commit();
+    // Contacts separately (nested collection can't batch easily)
     for(const c of D.contacts){
       const {id,...data}=c;
       await db.collection('contacts').doc(uid).collection('list').doc(id).set(JSON.parse(JSON.stringify(data)));
@@ -822,12 +794,12 @@ async function _saveToFirestore(){
 
 async function deleteTeamFromFirestore(teamId){
   if(!window._fbDb)return;
-  await window._fbDb.collection('teams').doc(teamId).delete();
+  try{await window._fbDb.collection('teams').doc(teamId).delete();}catch(e){console.error(e);}
 }
 
 async function deleteContactFromFirestore(contactId){
   if(!window._fbDb||!D._uid)return;
-  await window._fbDb.collection('contacts').doc(D._uid).collection('list').doc(contactId).delete();
+  try{await window._fbDb.collection('contacts').doc(D._uid).collection('list').doc(contactId).delete();}catch(e){console.error(e);}
 }
 function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
