@@ -326,7 +326,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
   <script>
     firebase.initializeApp({
       apiKey: "AIzaSyAkGvoBUH3nowpRR6oYp-NU0Ug3RQEYLoY",
-      authDomain: "badminton-budget.vercel.app",
+      authDomain: "badminton-budget.firebaseapp.com",
       projectId: "badminton-budget",
       storageBucket: "badminton-budget.firebasestorage.app",
       messagingSenderId: "1096871725452",
@@ -342,8 +342,14 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 
     window._fbSignIn = () => {
       const btn = document.querySelector('#login-screen button');
-      if(btn){ btn.innerHTML='跳轉登入中...'; btn.disabled=true; }
-      _auth.signInWithRedirect(_provider);
+      if(btn){ btn.innerHTML='登入中...'; btn.disabled=true; }
+      // Use popup for all devices - works on Vercel (no Firebase Hosting needed)
+      return _auth.signInWithPopup(_provider).catch(e => {
+        console.error('Popup error:', e.code);
+        if(btn){ btn.disabled=false; btn.innerHTML='使用 Google 帳號登入'; }
+        const err=document.getElementById('l-err');
+        if(err){ err.style.display='block'; err.textContent='登入失敗：'+e.message; }
+      });
     };
 
     window._fbSignOut = async () => {
@@ -382,14 +388,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
       }
     });
 
-    // Only handle errors from redirect
-    _auth.getRedirectResult().catch(e => {
-      if(e.code && e.code !== 'auth/no-current-user'){
-        console.error('Redirect error:', e.code, e.message);
-        const err=document.getElementById('l-err');
-        if(err){err.style.display='block';err.textContent='登入失敗：'+e.message;}
-      }
-    });
+
   </script>
 </head>
 <body>
@@ -692,19 +691,18 @@ async function _loadFromFirestore(){
   const email=D.currentUser;
   try{
     // Load user profile
-    const userDoc=await window._fbGetDoc(window._fbDoc(db,'users',uid));
-    if(userDoc.exists()){
+    const userDoc=await db.collection('users').doc(uid).get();
+    if(userDoc.exists){
       D.users[email]=userDoc.data();
     } else {
-      // New user - set defaults, migrate from localStorage if exists
       D.users[email]={
         name:window._fbUser.displayName||email.split('@')[0],
         photoURL:window._fbUser.photoURL||null
       };
-      await window._fbSetDoc(window._fbDoc(db,'users',uid),D.users[email]);
+      await db.collection('users').doc(uid).set(D.users[email]);
     }
-    // Load teams from Firestore (this is the source of truth)
-    const teamsSnap=await window._fbGetDocs(window._fbCollection(db,'teams'));
+    // Load teams
+    const teamsSnap=await db.collection('teams').get();
     const fsTeams=[];
     teamsSnap.forEach(d=>{
       const data=d.data();
@@ -712,22 +710,17 @@ async function _loadFromFirestore(){
         fsTeams.push({id:d.id,...data});
       }
     });
-    // Load contacts from Firestore
-    const contactsSnap=await window._fbGetDocs(window._fbCollection(db,'contacts',uid,'list'));
+    // Load contacts
+    const contactsSnap=await db.collection('contacts').doc(uid).collection('list').get();
     const fsContacts=[];
     contactsSnap.forEach(d=>fsContacts.push({id:d.id,...d.data()}));
-
     if(fsTeams.length>0||fsContacts.length>0){
-      // Firestore has data - use it as source of truth
       D.teams=fsTeams;
       D.contacts=fsContacts;
-      // Update localStorage to match
       try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}
     } else if(D._legacyData&&D._legacyData.teams&&D._legacyData.teams.length>0){
-      // Firestore empty but localStorage has data - offer migration
       showMigratePrompt();
     }
-    // If both empty, start fresh
   }catch(e){console.error('Firestore load error:',e);}
 }
 
@@ -740,22 +733,22 @@ function showMigratePrompt(){
 
 async function migrateToFirestore(){
   const legacy=D._legacyData;
-  if(!legacy)return;
-  // Migrate teams
+  if(!legacy||!window._fbDb)return;
+  const db=window._fbDb;
   for(const t of(legacy.teams||[])){
     const teamData={...t,ownerId:D._uid,editors:[],viewers:[],createdAt:Date.now()};
-    await window._fbSetDoc(window._fbDoc(window._fbDb,'teams',t.id),teamData);
+    const {id,...data}=teamData;
+    await db.collection('teams').doc(id).set(JSON.parse(JSON.stringify(data)));
     D.teams.push(teamData);
   }
-  // Migrate contacts
   for(const c of(legacy.contacts||[])){
-    await window._fbSetDoc(window._fbDoc(window._fbDb,'contacts',D._uid,'list',c.id),c);
+    const {id,...data}=c;
+    await db.collection('contacts').doc(D._uid).collection('list').doc(id).set(JSON.parse(JSON.stringify(data)));
     D.contacts.push(c);
   }
-  // Migrate user profile
   if(legacy.users&&legacy.users[D.currentUser]){
     D.users[D.currentUser]=legacy.users[D.currentUser];
-    await window._fbSetDoc(window._fbDoc(window._fbDb,'users',D._uid),D.users[D.currentUser]);
+    await db.collection('users').doc(D._uid).set(JSON.parse(JSON.stringify(D.users[D.currentUser])));
   }
   localStorage.removeItem(SK);
   D._legacyData=null;
