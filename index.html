@@ -352,66 +352,82 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
     window._fbProvider = provider;
     // Detect mobile - use redirect on mobile, popup on desktop
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    window._fbSignIn = () => isMobile
-      ? signInWithRedirect(auth, provider)
-      : signInWithPopup(auth, provider);
+    window._fbSignIn = () => {
+      if(isMobile){
+        // Show redirecting state
+        const btn = document.querySelector('#login-screen button');
+        if(btn) btn.textContent = '跳轉中...';
+        return signInWithRedirect(auth, provider);
+      } else {
+        return signInWithPopup(auth, provider);
+      }
+    };
 
     window._fbSignOut = () => signOut(auth);
 
-    let _authHandled = false;
+    let _currentUid = null; // track current user to avoid duplicate loads
 
-    async function handleUser(user) {
-      if (_authHandled) return;
-      _authHandled = true;
-      if (user) {
-        window._fbUser = user;
-        D.currentUser = user.email;
-        D._uid = user.uid;
-        // Show loading indicator
-        const loginScr = document.getElementById('login-screen');
-        if(loginScr) {
-          const loading = document.createElement('div');
+    async function handleSignedIn(user) {
+      // Avoid re-running if same user already loaded
+      if (_currentUid === user.uid) return;
+      _currentUid = user.uid;
+      window._fbUser = user;
+      D.currentUser = user.email;
+      D._uid = user.uid;
+      // Show loading on login screen
+      const loginScr = document.getElementById('login-screen');
+      if(loginScr && loginScr.style.display !== 'none') {
+        let loading = document.getElementById('login-loading');
+        if(!loading){
+          loading = document.createElement('div');
+          loading.id = 'login-loading';
           loading.style.cssText = 'margin-top:16px;font-size:13px;color:#8B9E8A;text-align:center';
           loading.textContent = '載入資料中...';
-          loading.id = 'login-loading';
           loginScr.appendChild(loading);
         }
-        try {
-          await window._loadFromFirestore();
-        } catch(e) {
-          console.error('Load error:', e);
-        }
-        document.getElementById('login-screen').style.display = 'none';
-        showMain();
-      } else {
-        window._fbUser = null;
-        D.currentUser = null;
-        D._uid = null;
-        D.teams = [];
-        D.contacts = [];
-        document.getElementById('main-screen').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'flex';
-        _authHandled = false; // reset so next login attempt works
       }
+      try {
+        await window._loadFromFirestore();
+      } catch(e) {
+        console.error('Load error:', e);
+      }
+      document.getElementById('login-screen').style.display = 'none';
+      showMain();
     }
 
-    // Handle redirect result FIRST (mobile login return)
+    function handleSignedOut() {
+      _currentUid = null;
+      window._fbUser = null;
+      D.currentUser = null;
+      D._uid = null;
+      D.teams = [];
+      D.contacts = [];
+      // Clear localStorage on logout so stale data doesn't show
+      try { localStorage.removeItem('badminton_v3'); } catch(e) {}
+      document.getElementById('main-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+
+    // Handle redirect result (mobile returns here after Google login)
     getRedirectResult(auth).then(result => {
       if (result && result.user) {
-        handleUser(result.user);
+        handleSignedIn(result.user);
       }
     }).catch(e => {
       const code = e.code || '';
-      if(code !== 'auth/no-current-user' && code !== 'auth/null-user'){
+      if(code !== 'auth/no-current-user' && code !== 'auth/null-user' && code !== 'auth/credential-already-in-use'){
         const err = document.getElementById('l-err');
         if(err){ err.style.display='block'; err.textContent='登入失敗：'+(e.message||code); }
       }
-      _authHandled = false;
     });
 
-    // Auth state observer (handles desktop popup + session restore)
+    // Auth state observer - fires on login, logout, and page refresh
     onAuthStateChanged(auth, (user) => {
-      handleUser(user);
+      if (user) {
+        handleSignedIn(user);
+      } else {
+        handleSignedOut();
+      }
     });
   </script>
 </head>
@@ -698,15 +714,12 @@ const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10
 const CATCOLS={'場地費':'#1a7a55','羽球':'#b45309','其他':'#1d4ed8'};
 
 function load(){
-  // Load from localStorage immediately so data shows up even before Firestore loads
+  // Only load legacy data for migration check - Firestore is source of truth
   try{
     const d=localStorage.getItem(SK);
     if(d){
       const parsed=JSON.parse(d);
-      if(parsed.teams)D.teams=parsed.teams;
-      if(parsed.contacts)D.contacts=parsed.contacts;
-      if(parsed.users)D.users=parsed.users;
-      D._legacyData=parsed; // keep for migration check
+      D._legacyData=parsed;
     }
   }catch(e){}
 }
@@ -840,10 +853,13 @@ function fmtDS(s){if(!s)return'';const d=new Date(s);return`${d.getMonth()+1}/${
 // doLogin replaced by Firebase Google Auth
 function doLogout(){
   closePanel('acct');
+  // Clear local data immediately
+  D.teams=[];D.contacts=[];D.users={};D.currentUser=null;D._uid=null;
+  try{localStorage.removeItem('badminton_v3');}catch(e){}
   if(window._fbSignOut){
     window._fbSignOut().catch(()=>{});
+    // handleSignedOut will be called by onAuthStateChanged
   } else {
-    D.currentUser=null;save();
     document.getElementById('main-screen').style.display='none';
     document.getElementById('login-screen').style.display='flex';
   }
