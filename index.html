@@ -659,8 +659,17 @@ const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10
 const CATCOLS={'場地費':'#1a7a55','羽球':'#b45309','其他':'#1d4ed8'};
 
 function load(){
-  // Legacy localStorage load for migration - we'll migrate on first Firestore save
-  try{const d=localStorage.getItem(SK);if(d){const parsed=JSON.parse(d);if(parsed.teams)D._legacyData=parsed;}}catch(e){}
+  // Load from localStorage immediately so data shows up even before Firestore loads
+  try{
+    const d=localStorage.getItem(SK);
+    if(d){
+      const parsed=JSON.parse(d);
+      if(parsed.teams)D.teams=parsed.teams;
+      if(parsed.contacts)D.contacts=parsed.contacts;
+      if(parsed.users)D.users=parsed.users;
+      D._legacyData=parsed; // keep for migration check
+    }
+  }catch(e){}
 }
 
 async function _loadFromFirestore(){
@@ -681,23 +690,31 @@ async function _loadFromFirestore(){
       };
       await window._fbSetDoc(window._fbDoc(db,'users',uid),D.users[email]);
     }
-    // Load teams owned by or shared with this user
+    // Load teams from Firestore (this is the source of truth)
     const teamsSnap=await window._fbGetDocs(window._fbCollection(db,'teams'));
-    D.teams=[];
+    const fsTeams=[];
     teamsSnap.forEach(d=>{
       const data=d.data();
       if(data.ownerId===uid||(data.editors||[]).includes(email)||(data.viewers||[]).includes(email)){
-        D.teams.push({id:d.id,...data});
+        fsTeams.push({id:d.id,...data});
       }
     });
-    // Load contacts
+    // Load contacts from Firestore
     const contactsSnap=await window._fbGetDocs(window._fbCollection(db,'contacts',uid,'list'));
-    D.contacts=[];
-    contactsSnap.forEach(d=>D.contacts.push({id:d.id,...d.data()}));
-    // Migrate legacy data if Firestore is empty and localStorage has data
-    if(D.teams.length===0&&D._legacyData&&D._legacyData.teams&&D._legacyData.teams.length>0){
+    const fsContacts=[];
+    contactsSnap.forEach(d=>fsContacts.push({id:d.id,...d.data()}));
+
+    if(fsTeams.length>0||fsContacts.length>0){
+      // Firestore has data - use it as source of truth
+      D.teams=fsTeams;
+      D.contacts=fsContacts;
+      // Update localStorage to match
+      try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}
+    } else if(D._legacyData&&D._legacyData.teams&&D._legacyData.teams.length>0){
+      // Firestore empty but localStorage has data - offer migration
       showMigratePrompt();
     }
+    // If both empty, start fresh
   }catch(e){console.error('Firestore load error:',e);}
 }
 
@@ -733,31 +750,36 @@ async function migrateToFirestore(){
   renderHome();
 }
 
-async function save(){
-  if(!window._fbDb||!D._uid){
-    // Fallback to localStorage if Firestore not ready
-    try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}
-    return;
-  }
+function save(){
+  // Always write to localStorage immediately (instant, no data loss on refresh)
+  try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}
+  // Also write to Firestore in background (async, for cross-device sync)
+  _saveToFirestore();
+}
+
+async function _saveToFirestore(){
+  if(!window._fbDb||!D._uid)return;
   const db=window._fbDb;const uid=D._uid;const email=D.currentUser;
   try{
-    // Save each team
-    for(const t of D.teams){
+    // Save teams
+    const teamPromises=D.teams.map(t=>{
       const {id,...data}=t;
       if(!data.ownerId)data.ownerId=uid;
       if(!data.editors)data.editors=[];
       if(!data.viewers)data.viewers=[];
-      await window._fbSetDoc(window._fbDoc(db,'teams',id),data);
-    }
+      return window._fbSetDoc(window._fbDoc(db,'teams',id),data);
+    });
     // Save user profile
-    if(D.users[email]){
-      await window._fbSetDoc(window._fbDoc(db,'users',uid),D.users[email]);
-    }
+    const userPromise=D.users[email]?
+      window._fbSetDoc(window._fbDoc(db,'users',uid),D.users[email]):
+      Promise.resolve();
     // Save contacts
-    for(const c of D.contacts){
+    const contactPromises=D.contacts.map(c=>{
       const {id,...data}=c;
-      await window._fbSetDoc(window._fbDoc(db,'contacts',uid,'list',id),data);
-    }
+      return window._fbSetDoc(window._fbDoc(db,'contacts',uid,'list',id),data);
+    });
+    // Run all in parallel for speed
+    await Promise.all([...teamPromises, userPromise, ...contactPromises]);
   }catch(e){console.error('Firestore save error:',e);}
 }
 
