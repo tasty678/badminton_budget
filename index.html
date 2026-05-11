@@ -339,7 +339,6 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
     _provider.setCustomParameters({prompt:'select_account'});
 
     window._fbDb = _db;
-    window._fbSignOut = () => _auth.signOut();
 
     window._fbSignIn = () => {
       const btn = document.querySelector('#login-screen button');
@@ -347,43 +346,55 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
       _auth.signInWithRedirect(_provider);
     };
 
-    // Single flag to prevent double execution
-    let _loaded = false;
-
-    // onAuthStateChanged is called once on page load with current auth state
-    // If user is logged in -> go to app
-    // If not -> show login screen and wait
-    _auth.onAuthStateChanged(async (user) => {
-      if(_loaded) return;
-      _loaded = true;
-
-      if(user){
-        // User is logged in (from session or redirect return)
-        window._fbUser = user;
-        D.currentUser = user.email;
-        D._uid = user.uid;
-        try{ await window._loadFromFirestore(); }catch(e){ console.error('Load error:',e); }
-        document.getElementById('login-screen').style.display = 'none';
-        showMain();
-      } else {
-        // Not logged in - show login screen
-        document.getElementById('login-screen').style.display = 'flex';
-        document.getElementById('main-screen').style.display = 'none';
-        // Re-enable button in case it was disabled
-        const btn = document.querySelector('#login-screen button');
-        if(btn){ btn.disabled=false; }
-      }
-    });
-
-    // For logout: need to reset _loaded so next login works
     window._fbSignOut = async () => {
-      _loaded = false;
       D.teams=[];D.contacts=[];D.users={};D.currentUser=null;D._uid=null;
       try{localStorage.removeItem('badminton_v3');}catch(e){}
       await _auth.signOut();
-      // onAuthStateChanged will fire again with null, but _loaded is now false
-      // so it will go into the else branch and show login screen
     };
+
+    let _appShown = false;
+
+    async function enterApp(user) {
+      if(_appShown) return;
+      _appShown = true;
+      window._fbUser = user;
+      D.currentUser = user.email;
+      D._uid = user.uid;
+      try{ await window._loadFromFirestore(); }catch(e){ console.error('Load error:',e); }
+      document.getElementById('login-screen').style.display = 'none';
+      showMain();
+    }
+
+    function showLogin() {
+      _appShown = false;
+      document.getElementById('main-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      const btn = document.querySelector('#login-screen button');
+      if(btn){ btn.disabled=false; btn.innerHTML='使用 Google 帳號登入'; }
+    }
+
+    // Step 1: check if returning from redirect
+    // getRedirectResult resolves immediately (no user) or with user if returning from redirect
+    _auth.getRedirectResult().then(async result => {
+      if(result && result.user){
+        // Returning from Google redirect - go straight to app
+        await enterApp(result.user);
+      }
+      // If no redirect result, Step 2 (onAuthStateChanged) will handle it
+    }).catch(e => {
+      console.error('Redirect error:', e.code, e.message);
+      showLogin();
+    });
+
+    // Step 2: handle normal page load auth state (existing session or logged out)
+    _auth.onAuthStateChanged(async user => {
+      if(_appShown) return; // already handled by getRedirectResult
+      if(user){
+        await enterApp(user);
+      } else {
+        showLogin();
+      }
+    });
   </script>
 </head>
 <body>
