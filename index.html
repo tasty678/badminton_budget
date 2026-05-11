@@ -356,26 +356,31 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
       ? signInWithRedirect(auth, provider)
       : signInWithPopup(auth, provider);
 
-    // Handle redirect result when returning from Google login on mobile
-    getRedirectResult(auth).then(result => {
-      // result handled by onAuthStateChanged below
-    }).catch(e => {
-      if(e.code !== 'auth/no-current-user'){
-        const err = document.getElementById('l-err');
-        if(err){ err.style.display='block'; err.textContent='登入失敗：'+e.message; }
-      }
-    });
     window._fbSignOut = () => signOut(auth);
 
-    // Auth state observer
-    onAuthStateChanged(auth, async (user) => {
+    let _authHandled = false;
+
+    async function handleUser(user) {
+      if (_authHandled) return;
+      _authHandled = true;
       if (user) {
         window._fbUser = user;
         D.currentUser = user.email;
         D._uid = user.uid;
-        // Load user profile from Firestore
-        await window._loadFromFirestore();
-        document.getElementById('login-screen').innerHTML+='<div style="margin-top:16px;font-size:13px;color:var(--text3);text-align:center">載入資料中...</div>';
+        // Show loading indicator
+        const loginScr = document.getElementById('login-screen');
+        if(loginScr) {
+          const loading = document.createElement('div');
+          loading.style.cssText = 'margin-top:16px;font-size:13px;color:#8B9E8A;text-align:center';
+          loading.textContent = '載入資料中...';
+          loading.id = 'login-loading';
+          loginScr.appendChild(loading);
+        }
+        try {
+          await window._loadFromFirestore();
+        } catch(e) {
+          console.error('Load error:', e);
+        }
         document.getElementById('login-screen').style.display = 'none';
         showMain();
       } else {
@@ -386,7 +391,27 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
         D.contacts = [];
         document.getElementById('main-screen').style.display = 'none';
         document.getElementById('login-screen').style.display = 'flex';
+        _authHandled = false; // reset so next login attempt works
       }
+    }
+
+    // Handle redirect result FIRST (mobile login return)
+    getRedirectResult(auth).then(result => {
+      if (result && result.user) {
+        handleUser(result.user);
+      }
+    }).catch(e => {
+      const code = e.code || '';
+      if(code !== 'auth/no-current-user' && code !== 'auth/null-user'){
+        const err = document.getElementById('l-err');
+        if(err){ err.style.display='block'; err.textContent='登入失敗：'+(e.message||code); }
+      }
+      _authHandled = false;
+    });
+
+    // Auth state observer (handles desktop popup + session restore)
+    onAuthStateChanged(auth, (user) => {
+      handleUser(user);
     });
   </script>
 </head>
