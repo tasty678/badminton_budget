@@ -1995,14 +1995,17 @@ async function addShareMember(role){
   if(role==='editor'&&!t.editors.includes(email))t.editors.push(email);
   if(role==='viewer'&&!t.viewers.includes(email))t.viewers.push(email);
   emailEl.value='';
-  await save();
+  save();
+  await _saveToFirestore(); // ensure it's saved to cloud immediately
   renderShareList(t);
+  alert(`已邀請 ${email}，對方用 Google 登入後即可看到此球團`);
 }
 async function removeShareMember(role,email){
   const t=D.teams.find(x=>x.id===_shareTeamId);if(!t)return;
   if(role==='editor')t.editors=(t.editors||[]).filter(e=>e!==email);
   if(role==='viewer')t.viewers=(t.viewers||[]).filter(e=>e!==email);
-  await save();
+  save();
+  await _saveToFirestore();
   renderShareList(t);
 }
 
