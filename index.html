@@ -322,7 +322,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
@@ -350,7 +350,21 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
     window._fbDeleteDoc = deleteDoc;
     window._fbOnSnapshot = onSnapshot;
     window._fbProvider = provider;
-    window._fbSignIn = () => signInWithPopup(auth, provider);
+    // Detect mobile - use redirect on mobile, popup on desktop
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    window._fbSignIn = () => isMobile
+      ? signInWithRedirect(auth, provider)
+      : signInWithPopup(auth, provider);
+
+    // Handle redirect result when returning from Google login on mobile
+    getRedirectResult(auth).then(result => {
+      // result handled by onAuthStateChanged below
+    }).catch(e => {
+      if(e.code !== 'auth/no-current-user'){
+        const err = document.getElementById('l-err');
+        if(err){ err.style.display='block'; err.textContent='登入失敗：'+e.message; }
+      }
+    });
     window._fbSignOut = () => signOut(auth);
 
     // Auth state observer
