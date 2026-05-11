@@ -799,49 +799,35 @@ function save(){
 }
 
 async function _saveToFirestore(){
-  if(!window._fbDb||!D._uid){
-    console.warn('Firestore not ready - db:',!!window._fbDb,'uid:',D._uid);
-    return;
-  }
+  if(!window._fbDb||!D._uid)return;
   const db=window._fbDb;const uid=D._uid;const email=D.currentUser;
-  console.log('Saving to Firestore - teams:',D.teams.length,'uid:',uid);
   try{
-    // Save teams one by one for clearer error tracking
     for(const t of D.teams){
       const {id,...data}=t;
       if(!data.ownerId)data.ownerId=uid;
       if(!data.editors)data.editors=[];
       if(!data.viewers)data.viewers=[];
-      // Clean up undefined values (Firestore doesn't accept them)
       const clean=JSON.parse(JSON.stringify(data));
-      await window._fbSetDoc(window._fbDoc(db,'teams',id),clean);
-      console.log('Saved team:',id);
+      await db.collection('teams').doc(id).set(clean);
     }
-    // Save user profile
     if(D.users[email]){
-      const cleanUser=JSON.parse(JSON.stringify(D.users[email]));
-      await window._fbSetDoc(window._fbDoc(db,'users',uid),cleanUser);
+      await db.collection('users').doc(uid).set(JSON.parse(JSON.stringify(D.users[email])));
     }
-    // Save contacts
     for(const c of D.contacts){
       const {id,...data}=c;
-      const clean=JSON.parse(JSON.stringify(data));
-      await window._fbSetDoc(window._fbDoc(db,'contacts',uid,'list',id),clean);
+      await db.collection('contacts').doc(uid).collection('list').doc(id).set(JSON.parse(JSON.stringify(data)));
     }
-    console.log('Firestore save complete');
-  }catch(e){
-    console.error('Firestore save error:',e.code,e.message);
-  }
+  }catch(e){console.error('Firestore save error:',e.code,e.message);}
 }
 
 async function deleteTeamFromFirestore(teamId){
   if(!window._fbDb)return;
-  await window._fbDeleteDoc(window._fbDoc(window._fbDb,'teams',teamId));
+  await window._fbDb.collection('teams').doc(teamId).delete();
 }
 
 async function deleteContactFromFirestore(contactId){
   if(!window._fbDb||!D._uid)return;
-  await window._fbDeleteDoc(window._fbDoc(window._fbDb,'contacts',D._uid,'list',contactId));
+  await window._fbDb.collection('contacts').doc(D._uid).collection('list').doc(contactId).delete();
 }
 function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
