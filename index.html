@@ -354,45 +354,40 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans TC',sans-serif
 
     let _appShown = false;
 
-    async function enterApp(user) {
-      if(_appShown) return;
-      _appShown = true;
-      window._fbUser = user;
-      D.currentUser = user.email;
-      D._uid = user.uid;
-      try{ await window._loadFromFirestore(); }catch(e){ console.error('Load error:',e); }
-      document.getElementById('login-screen').style.display = 'none';
-      showMain();
-    }
-
-    function showLogin() {
-      _appShown = false;
-      document.getElementById('main-screen').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
-      const btn = document.querySelector('#login-screen button');
-      if(btn){ btn.disabled=false; btn.innerHTML='使用 Google 帳號登入'; }
-    }
-
-    // Step 1: check if returning from redirect
-    // getRedirectResult resolves immediately (no user) or with user if returning from redirect
-    _auth.getRedirectResult().then(async result => {
-      if(result && result.user){
-        // Returning from Google redirect - go straight to app
-        await enterApp(result.user);
+    // Single source of truth: onAuthStateChanged
+    _auth.onAuthStateChanged(async user => {
+      if(user){
+        if(_appShown) return;
+        try{
+          console.log('User logged in:', user.email);
+          window._fbUser = user;
+          D.currentUser = user.email;
+          D._uid = user.uid;
+          await window._loadFromFirestore();
+          _appShown = true;
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('main-screen').style.display = 'flex';
+          showPage('home');
+        }catch(e){
+          console.error('enterApp error:', e);
+          const err=document.getElementById('l-err');
+          if(err){err.style.display='block';err.textContent='資料載入失敗，請重新整理';}
+        }
+      } else {
+        _appShown = false;
+        document.getElementById('main-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        const btn=document.querySelector('#login-screen button');
+        if(btn){btn.disabled=false;btn.innerHTML='使用 Google 帳號登入';}
       }
-      // If no redirect result, Step 2 (onAuthStateChanged) will handle it
-    }).catch(e => {
-      console.error('Redirect error:', e.code, e.message);
-      showLogin();
     });
 
-    // Step 2: handle normal page load auth state (existing session or logged out)
-    _auth.onAuthStateChanged(async user => {
-      if(_appShown) return; // already handled by getRedirectResult
-      if(user){
-        await enterApp(user);
-      } else {
-        showLogin();
+    // Only handle errors from redirect
+    _auth.getRedirectResult().catch(e => {
+      if(e.code && e.code !== 'auth/no-current-user'){
+        console.error('Redirect error:', e.code, e.message);
+        const err=document.getElementById('l-err');
+        if(err){err.style.display='block';err.textContent='登入失敗：'+e.message;}
       }
     });
   </script>
